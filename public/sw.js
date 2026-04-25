@@ -1,8 +1,10 @@
-const CACHE = "ian-v1";
-const SHELL = ["/login", "/dashboard", "/manifest.json"];
+const CACHE = "ian-v2";
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // Only cache static assets, never SSR pages
+  e.waitUntil(
+    caches.open(CACHE).then((c) => c.addAll(["/manifest.json"])).then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", (e) => {
@@ -14,8 +16,9 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
-  // Don't cache API calls
+  // Never intercept API calls or SSR pages — pass through directly
   if (url.pathname.startsWith("/api/")) return;
+  if (!url.pathname.match(/\.(png|jpg|svg|ico|json|css|js|woff2?)$/)) return;
   e.respondWith(
     caches.match(e.request).then((cached) => cached || fetch(e.request))
   );
