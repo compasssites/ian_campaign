@@ -1,4 +1,5 @@
 name = "ian-campaign"
+pages_build_output_dir = "./dist"
 compatibility_date = "2025-03-28"
 compatibility_flags = ["nodejs_compat"]
 
@@ -15,8 +16,3 @@ migrations_dir = "src/lib/db/migrations"
 binding = "SESSIONS"
 id = "516dae1aaa5b4ed3b82893e5725ea401"
 
-[assets]
-directory = "./dist"
-binding = "ASSETS"
-html_handling = "auto-trailing-slash"
-not_found_handling = "404-page"
