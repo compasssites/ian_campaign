@@ -10,21 +10,21 @@
     "db:migrate": "wrangler d1 migrations apply ian-campaign-db --remote"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "^12.0.0",
-    "@astrojs/react": "^5.0.4",
-    "@tailwindcss/vite": "^4.2.4",
-    "astro": "^6.1.9",
-    "drizzle-orm": "^0.45.2",
-    "hono": "^4.12.15",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
-    "tailwindcss": "^4.2.4",
-    "ulid": "^3.0.2"
+    "@astrojs/cloudflare": "^12.4.0",
+    "@astrojs/react": "^4.2.0",
+    "@tailwindcss/vite": "^4.1.4",
+    "astro": "^5.7.0",
+    "drizzle-orm": "^0.41.0",
+    "hono": "^4.7.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^4.1.4",
+    "ulid": "^2.3.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260425.1",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
+    "@cloudflare/workers-types": "^4.20250409.0",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
     "drizzle-kit": "^0.31.10",
     "typescript": "^5.9.3",
     "wrangler": "^4.85.0"
