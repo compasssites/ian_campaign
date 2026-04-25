@@ -11,6 +11,13 @@ function ulid(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+function escapeCsv(value: string | number | null | undefined) {
+  if (value === null || value === undefined) return "";
+  const text = String(value);
+  if (/[",\n]/.test(text)) return `"${text.replace(/"/g, "\"\"")}"`;
+  return text;
+}
+
 contactRoutes.get("/", async (c) => {
   const { status, group, search, page } = c.req.query();
   const pageNum = parseInt(page ?? "1", 10);
@@ -58,6 +65,83 @@ contactRoutes.get("/", async (c) => {
     total: countResult?.total ?? 0,
     page: pageNum,
     pages: Math.ceil((countResult?.total ?? 0) / limit),
+  });
+});
+
+contactRoutes.get("/export.csv", async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT
+      name,
+      phone,
+      email,
+      referred_by,
+      group_tag,
+      shared_interests,
+      remarks,
+      wa_sent,
+      created_at
+     FROM contacts
+     ORDER BY created_at DESC`
+  ).all<{
+    name: string;
+    phone: string;
+    email?: string | null;
+    referred_by?: string | null;
+    group_tag?: string | null;
+    shared_interests?: string | null;
+    remarks?: string | null;
+    wa_sent: number;
+    created_at: string;
+  }>();
+
+  const headers = [
+    "Name",
+    "Given Name",
+    "Family Name",
+    "Phone 1 - Type",
+    "Phone 1 - Value",
+    "E-mail 1 - Type",
+    "E-mail 1 - Value",
+    "Organization 1 - Title",
+    "Notes",
+    "Custom Field 1 - Type",
+    "Custom Field 1 - Value",
+    "Custom Field 2 - Type",
+    "Custom Field 2 - Value",
+    "Custom Field 3 - Type",
+    "Custom Field 3 - Value",
+  ];
+
+  const lines = [
+    headers.join(","),
+    ...results.map((contact) => {
+      const notes = [contact.remarks, contact.shared_interests].filter(Boolean).join(" | ");
+      return [
+        escapeCsv(contact.name),
+        escapeCsv(contact.name),
+        "",
+        "Mobile",
+        escapeCsv(contact.phone),
+        contact.email ? "Work" : "",
+        escapeCsv(contact.email),
+        "IAN Campaign",
+        escapeCsv(notes),
+        "Group",
+        escapeCsv(contact.group_tag),
+        "Referred By",
+        escapeCsv(contact.referred_by),
+        "WhatsApp Sent",
+        escapeCsv(contact.wa_sent ? "Yes" : "No"),
+      ].join(",");
+    }),
+  ];
+
+  return new Response(lines.join("\n"), {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="ian-contacts-${new Date().toISOString().slice(0, 10)}.csv"`,
+      "Cache-Control": "no-store",
+    },
   });
 });
 

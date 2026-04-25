@@ -45,6 +45,32 @@ const TABS = [
 
 interface Props { memberName: string; role?: string; }
 
+function MenuButton({ label, icon, danger, onClick }: { label: string; icon: string; danger?: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: "flex",
+        width: "100%",
+        alignItems: "center",
+        gap: 10,
+        padding: "14px 16px",
+        background: "none",
+        border: "none",
+        fontSize: 14,
+        fontWeight: 600,
+        color: danger ? "#dc2626" : "#111827",
+        cursor: "pointer",
+        textAlign: "left",
+        borderBottom: danger ? "none" : "1px solid #f1f5f9",
+      }}
+    >
+      <span>{icon}</span>
+      <span>{label}</span>
+    </button>
+  );
+}
+
 function GroupPicker({ groups, active, onChange }: { groups: string[]; active: string; onChange: (g: string) => void }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -107,6 +133,12 @@ export default function Dashboard({ memberName, role }: Props) {
   const [activeGroup, setActiveGroup] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [currentPin, setCurrentPin] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [pinError, setPinError] = useState("");
+  const [pinLoading, setPinLoading] = useState(false);
 
   const fetchStats = useCallback(async () => {
     try { const r = await fetch("/api/stats"); if (r.ok) setStats(await r.json()); } catch {}
@@ -150,6 +182,49 @@ export default function Dashboard({ memberName, role }: Props) {
     await fetch(`/api/contacts/${id}`, { method: "DELETE" }); refresh();
   }, [refresh]);
 
+  const handleExport = useCallback(() => {
+    setMenuOpen(false);
+    window.location.href = "/api/contacts/export.csv";
+  }, []);
+
+  const handleChangePin = useCallback(async () => {
+    if (!currentPin || !newPin) {
+      setPinError("Current PIN and new PIN are required.");
+      return;
+    }
+    if (newPin.length < 4) {
+      setPinError("New PIN must be at least 4 characters.");
+      return;
+    }
+    if (newPin !== confirmPin) {
+      setPinError("New PIN and confirm PIN must match.");
+      return;
+    }
+
+    setPinLoading(true);
+    setPinError("");
+    try {
+      const response = await fetch("/api/auth/change-pin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPin, newPin }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ error: "Unable to change PIN" })) as { error?: string };
+        setPinError(data.error || "Unable to change PIN");
+        return;
+      }
+
+      setShowPinModal(false);
+      setCurrentPin("");
+      setNewPin("");
+      setConfirmPin("");
+    } finally {
+      setPinLoading(false);
+    }
+  }, [confirmPin, currentPin, newPin]);
+
   const logout = async () => { await fetch("/api/auth/logout", { method: "POST" }); window.location.href = "/login"; };
 
   const tabCount = (key: string) => {
@@ -184,11 +259,9 @@ export default function Dashboard({ memberName, role }: Props) {
                       👥 Manage Users
                     </a>
                   )}
-                  <button onClick={() => { setMenuOpen(false); window.location.href="/users"; }} style={{ display: role === "superadmin" ? "none" : "flex", width: "100%", alignItems: "center", gap: 10, padding: "14px 16px", background: "none", border: "none", fontSize: 14, fontWeight: 600, color: "#111827", cursor: "pointer", borderBottom: "1px solid #f1f5f9", textAlign: "left" }}>
-                  </button>
-                  <button onClick={() => { setMenuOpen(false); logout(); }} style={{ display: "flex", width: "100%", alignItems: "center", gap: 10, padding: "14px 16px", background: "none", border: "none", fontSize: 14, fontWeight: 600, color: "#dc2626", cursor: "pointer", textAlign: "left" }}>
-                    🚪 Sign Out
-                  </button>
+                  <MenuButton label="Export Contacts CSV" icon="⬇️" onClick={handleExport} />
+                  <MenuButton label="Change PIN" icon="🔐" onClick={() => { setMenuOpen(false); setPinError(""); setShowPinModal(true); }} />
+                  <MenuButton label="Sign Out" icon="🚪" danger onClick={() => { setMenuOpen(false); logout(); }} />
                 </div>
               )}
             </div>
@@ -247,6 +320,49 @@ export default function Dashboard({ memberName, role }: Props) {
 
       {showBulk && <BulkImport onClose={() => setShowBulk(false)} onDone={() => { setShowBulk(false); fetchGroups(); refresh(); }} />}
       {showAdd && <AddContact onClose={() => setShowAdd(false)} onDone={() => { setShowAdd(false); refresh(); }} />}
+      {showPinModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, zIndex: 80 }}>
+          <div style={{ width: "100%", maxWidth: 420, background: "white", borderRadius: 16, boxShadow: "0 12px 32px rgba(0,0,0,0.22)", padding: 18 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#111827" }}>Change PIN</h2>
+                <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6b7280" }}>Update your login PIN for this account.</p>
+              </div>
+              <button onClick={() => setShowPinModal(false)} style={{ background: "none", border: "none", fontSize: 22, lineHeight: 1, color: "#9ca3af", cursor: "pointer" }}>×</button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {[
+                { label: "Current PIN", value: currentPin, setter: setCurrentPin },
+                { label: "New PIN", value: newPin, setter: setNewPin },
+                { label: "Confirm PIN", value: confirmPin, setter: setConfirmPin },
+              ].map(({ label, value, setter }) => (
+                <label key={label} style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13, color: "#374151", fontWeight: 600 }}>
+                  <span>{label}</span>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    value={value}
+                    onChange={e => setter(e.target.value)}
+                    style={{ border: "1.5px solid #e5e7eb", borderRadius: 10, padding: "10px 12px", fontSize: 14, outline: "none" }}
+                  />
+                </label>
+              ))}
+            </div>
+
+            {pinError && <p style={{ margin: "12px 0 0", fontSize: 13, color: "#dc2626" }}>{pinError}</p>}
+
+            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+              <button onClick={handleChangePin} disabled={pinLoading} style={{ flex: 1, background: "#1e3a8a", color: "white", border: "none", borderRadius: 10, padding: "11px 14px", fontSize: 14, fontWeight: 700, cursor: pinLoading ? "wait" : "pointer", opacity: pinLoading ? 0.75 : 1 }}>
+                {pinLoading ? "Saving..." : "Update PIN"}
+              </button>
+              <button onClick={() => setShowPinModal(false)} style={{ flex: 1, background: "#f3f4f6", color: "#374151", border: "none", borderRadius: 10, padding: "11px 14px", fontSize: 14, cursor: "pointer" }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
