@@ -1,0 +1,22 @@
+name = "ian-campaign"
+compatibility_date = "2025-03-28"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+APP_URL = "https://ian-campaign.pages.dev"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ian-campaign-db"
+database_id = "REPLACE_WITH_D1_ID"
+migrations_dir = "src/lib/db/migrations"
+
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "REPLACE_WITH_KV_ID"
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "404-page"

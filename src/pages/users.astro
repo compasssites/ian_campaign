@@ -1,0 +1,16 @@
+---
+import Shell from "../layouts/Shell.astro";
+import { getSession, getTokenFromCookie } from "../lib/auth/session";
+import UserManagement from "../components/UserManagement";
+
+const runtime = Astro.locals.runtime;
+const env = runtime?.env as Env | undefined;
+const token = getTokenFromCookie(Astro.request.headers.get("Cookie"));
+const session = env?.SESSIONS ? await getSession(env.SESSIONS, token) : null;
+
+if (!session) return Astro.redirect("/login");
+if (session.role !== "superadmin") return Astro.redirect("/dashboard");
+---
+<Shell title="User Management — IAN Campaign">
+  <UserManagement client:load />
+</Shell>

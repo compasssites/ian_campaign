@@ -1,0 +1,14 @@
+---
+import { getSession, getTokenFromCookie } from "../lib/auth/session";
+
+const runtime = Astro.locals.runtime;
+const env = runtime?.env as { DB: D1Database; SESSIONS: KVNamespace; CAMPAIGN_PIN: string };
+const token = getTokenFromCookie(Astro.request.headers.get("Cookie"));
+const session = env?.SESSIONS ? await getSession(env.SESSIONS, token) : null;
+
+if (session) {
+  return Astro.redirect("/dashboard");
+} else {
+  return Astro.redirect("/login");
+}
+---

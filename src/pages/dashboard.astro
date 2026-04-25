@@ -1,0 +1,17 @@
+---
+import Shell from "../layouts/Shell.astro";
+import { getSession, getTokenFromCookie } from "../lib/auth/session";
+import Dashboard from "../components/Dashboard";
+
+const runtime = Astro.locals.runtime;
+const env = runtime?.env as Env | undefined;
+const token = getTokenFromCookie(Astro.request.headers.get("Cookie"));
+const session = env?.SESSIONS ? await getSession(env.SESSIONS, token) : null;
+if (!session) return Astro.redirect("/login");
+
+const memberName = session.memberName;
+const role = session.role;
+---
+<Shell title="Dashboard — IAN Campaign">
+  <Dashboard memberName={memberName} role={role} client:load />
+</Shell>
