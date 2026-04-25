@@ -14,6 +14,7 @@ const STATUS: Record<string, { label: string; dot: string; bg: string; border: s
   pending:     { label: "Pending",     dot: "#d1d5db", bg: "#ffffff", border: "#e5e7eb", badgeBg: "#f3f4f6", badgeColor: "#6b7280" },
   spoke:       { label: "Spoke",       dot: "#10b981", bg: "#f0fdf4", border: "#bbf7d0", badgeBg: "#d1fae5", badgeColor: "#065f46" },
   no_answer:   { label: "No Answer",   dot: "#ef4444", bg: "#fef2f2", border: "#fecaca", badgeBg: "#fee2e2", badgeColor: "#991b1b" },
+  wrong_number:{ label: "Wrong Number",dot: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe", badgeBg: "#ede9fe", badgeColor: "#5b21b6" },
   callback:    { label: "Callback",    dot: "#f59e0b", bg: "#fffbeb", border: "#fde68a", badgeBg: "#fef3c7", badgeColor: "#92400e" },
   followed_up: { label: "Followed Up", dot: "#3b82f6", bg: "#eff6ff", border: "#bfdbfe", badgeBg: "#dbeafe", badgeColor: "#1e40af" },
 };
@@ -21,6 +22,7 @@ const STATUS: Record<string, { label: string; dot: string; bg: string; border: s
 const OUTCOME_BTNS = [
   { s: "spoke" as ContactStatus, label: "✓ Spoke", bg: "#10b981" },
   { s: "no_answer" as ContactStatus, label: "✗ No Answer", bg: "#ef4444" },
+  { s: "wrong_number" as ContactStatus, label: "! Wrong No.", bg: "#7c3aed" },
   { s: "callback" as ContactStatus, label: "↩ Callback", bg: "#f59e0b" },
   { s: "followed_up" as ContactStatus, label: "✔ Followed Up", bg: "#3b82f6" },
   { s: "pending" as ContactStatus, label: "↺ Reset", bg: "#9ca3af" },

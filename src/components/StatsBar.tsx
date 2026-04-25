@@ -1,5 +1,5 @@
 interface Props {
-  stats: { total: number; spoke: number; no_answer: number; callback: number; followed_up: number; pending: number; called: number };
+  stats: { total: number; spoke: number; no_answer: number; wrong_number: number; callback: number; followed_up: number; pending: number; called: number };
 }
 
 export default function StatsBar({ stats }: Props) {
@@ -16,6 +16,7 @@ export default function StatsBar({ stats }: Props) {
       <div style={{ display: "flex", gap: 16, marginTop: 8, fontSize: 12 }}>
         <span style={{ color: "#6ee7b7" }}>✓ {stats.spoke} spoke</span>
         <span style={{ color: "#fca5a5" }}>✗ {stats.no_answer} missed</span>
+        <span style={{ color: "#c4b5fd" }}>! {stats.wrong_number} wrong no.</span>
         <span style={{ color: "#fcd34d" }}>↩ {stats.callback} callback</span>
         <span style={{ color: "rgba(255,255,255,0.5)" }}>⏳ {stats.pending} pending</span>
       </div>

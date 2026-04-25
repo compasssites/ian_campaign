@@ -27,7 +27,7 @@ interface Props {
   onClose: () => void;
 }
 
-const STATUSES: ContactStatus[] = ["pending", "spoke", "no_answer", "callback", "followed_up"];
+const STATUSES: ContactStatus[] = ["pending", "spoke", "no_answer", "wrong_number", "callback", "followed_up"];
 const editableColumns: Array<keyof MasterContact> = [
   "name",
   "phone",

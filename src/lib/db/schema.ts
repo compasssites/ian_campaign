@@ -1,4 +1,4 @@
-export type ContactStatus = "pending" | "spoke" | "no_answer" | "callback" | "followed_up";
+export type ContactStatus = "pending" | "spoke" | "no_answer" | "wrong_number" | "callback" | "followed_up";
 
 export interface Contact {
   id: string;

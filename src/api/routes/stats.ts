@@ -16,12 +16,12 @@ statsRoutes.get("/", async (c) => {
     GROUP BY COALESCE(cl.status, 'pending')
   `).all<{ status: string; n: number }>();
 
-  const map: Record<string, number> = { pending: 0, spoke: 0, no_answer: 0, callback: 0, followed_up: 0 };
+  const map: Record<string, number> = { pending: 0, spoke: 0, no_answer: 0, wrong_number: 0, callback: 0, followed_up: 0 };
   for (const row of byStatus.results) map[row.status] = row.n;
 
   return c.json({
     total: total?.n ?? 0,
     ...map,
-    called: (map.spoke ?? 0) + (map.no_answer ?? 0) + (map.callback ?? 0) + (map.followed_up ?? 0),
+    called: (map.spoke ?? 0) + (map.no_answer ?? 0) + (map.wrong_number ?? 0) + (map.callback ?? 0) + (map.followed_up ?? 0),
   });
 });

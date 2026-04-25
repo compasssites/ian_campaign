@@ -22,7 +22,7 @@ callRoutes.post("/", async (c) => {
     return c.json({ error: "contact_id and status required" }, 400);
   }
 
-  const validStatuses: ContactStatus[] = ["pending", "spoke", "no_answer", "callback", "followed_up"];
+  const validStatuses: ContactStatus[] = ["pending", "spoke", "no_answer", "wrong_number", "callback", "followed_up"];
   if (!validStatuses.includes(body.status)) {
     return c.json({ error: "Invalid status" }, 400);
   }

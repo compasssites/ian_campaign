@@ -40,6 +40,7 @@ const TABS = [
   { key: "pending", label: "Pending" },
   { key: "spoke", label: "Spoke" },
   { key: "no_answer", label: "Missed" },
+  { key: "wrong_number", label: "Wrong No." },
   { key: "callback", label: "Callback" },
   { key: "followed_up", label: "Done" },
 ];
@@ -123,7 +124,7 @@ function GroupPicker({ groups, active, onChange }: { groups: string[]; active: s
 
 export default function Dashboard({ memberName, role }: Props) {
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [stats, setStats] = useState({ total: 0, spoke: 0, no_answer: 0, callback: 0, followed_up: 0, pending: 0, called: 0 });
+  const [stats, setStats] = useState({ total: 0, spoke: 0, no_answer: 0, wrong_number: 0, callback: 0, followed_up: 0, pending: 0, called: 0 });
   const [activeTab, setActiveTab] = useState("all");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
