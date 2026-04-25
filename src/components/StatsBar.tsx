@@ -4,24 +4,20 @@ interface Props {
 
 export default function StatsBar({ stats }: Props) {
   const pct = stats.total > 0 ? Math.round((stats.called / stats.total) * 100) : 0;
-
   return (
-    <div className="px-4 pb-3">
-      <div className="flex items-center justify-between text-xs text-blue-200 mb-1.5">
+    <div style={{ padding: "0 16px 14px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "rgba(255,255,255,0.65)", marginBottom: 6 }}>
         <span>{stats.called} called of {stats.total} total</span>
-        <span>{pct}%</span>
+        <span style={{ fontWeight: 700, color: "white" }}>{pct}%</span>
       </div>
-      <div className="h-2 bg-blue-900 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-green-400 rounded-full transition-all duration-500"
-          style={{ width: `${pct}%` }}
-        />
+      <div style={{ height: 6, background: "rgba(255,255,255,0.15)", borderRadius: 99, overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg, #34d399, #10b981)", borderRadius: 99, transition: "width 0.5s" }} />
       </div>
-      <div className="flex gap-3 mt-2 text-xs">
-        <span className="text-green-300">✓ {stats.spoke} spoke</span>
-        <span className="text-red-300">✗ {stats.no_answer} missed</span>
-        <span className="text-yellow-300">↩ {stats.callback} callback</span>
-        <span className="text-blue-300">⏳ {stats.pending} pending</span>
+      <div style={{ display: "flex", gap: 16, marginTop: 8, fontSize: 12 }}>
+        <span style={{ color: "#6ee7b7" }}>✓ {stats.spoke} spoke</span>
+        <span style={{ color: "#fca5a5" }}>✗ {stats.no_answer} missed</span>
+        <span style={{ color: "#fcd34d" }}>↩ {stats.callback} callback</span>
+        <span style={{ color: "rgba(255,255,255,0.5)" }}>⏳ {stats.pending} pending</span>
       </div>
     </div>
   );

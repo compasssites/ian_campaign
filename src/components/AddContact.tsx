@@ -1,78 +1,56 @@
 import { useState } from "react";
 
-interface Props {
-  onClose: () => void;
-  onDone: () => void;
-}
+interface Props { onClose: () => void; onDone: () => void; }
+
+const overlay: React.CSSProperties = { position: "fixed", inset: 0, zIndex: 50, background: "rgba(0,0,0,0.55)", display: "flex", flexDirection: "column", justifyContent: "flex-end" };
+const sheet: React.CSSProperties = { background: "white", borderRadius: "24px 24px 0 0", padding: "24px 20px", maxHeight: "90vh", overflowY: "auto" };
+const label: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 };
+const input: React.CSSProperties = { width: "100%", border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "11px 14px", fontSize: 15, outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit", background: "#f9fafb" };
+const btn: React.CSSProperties = { width: "100%", padding: 15, background: "linear-gradient(135deg, #1e3a8a, #2563eb)", color: "white", border: "none", borderRadius: 14, fontSize: 16, fontWeight: 700, cursor: "pointer" };
+
+const FIELDS = [
+  { key: "name", label: "Name *", placeholder: "Dr. Ramesh Nair", type: "text" },
+  { key: "phone", label: "Phone *", placeholder: "9876543210", type: "tel" },
+  { key: "referred_by", label: "Referred By", placeholder: "e.g. Kamal", type: "text" },
+  { key: "group_tag", label: "Group / List", placeholder: "e.g. Karnataka", type: "text" },
+  { key: "shared_interests", label: "Shared Interests", placeholder: "e.g. Paediatrics, IAN council", type: "text" },
+  { key: "remarks", label: "Remarks", placeholder: "Any notes…", type: "text" },
+];
 
 export default function AddContact({ onClose, onDone }: Props) {
-  const [form, setForm] = useState({ name: "", phone: "", referred_by: "", group_tag: "", shared_interests: "", remarks: "" });
+  const [form, setForm] = useState<Record<string, string>>({ name: "", phone: "", referred_by: "", group_tag: "", shared_interests: "", remarks: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
-
   const handleSave = async () => {
-    if (!form.name.trim() || !form.phone.trim()) { setError("Name and phone are required"); return; }
-    setLoading(true);
-    setError("");
+    if (!form.name?.trim() || !form.phone?.trim()) { setError("Name and phone are required"); return; }
+    setLoading(true); setError("");
     try {
-      const res = await fetch("/api/contacts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.name.trim(),
-          phone: form.phone.trim(),
-          referred_by: form.referred_by.trim() || undefined,
-          group_tag: form.group_tag.trim() || undefined,
-          shared_interests: form.shared_interests.trim() || undefined,
-          remarks: form.remarks.trim() || undefined,
-        }),
-      });
-      if (res.ok) { onDone(); }
+      const body: Record<string, string> = {};
+      for (const [k, v] of Object.entries(form)) if (v.trim()) body[k] = v.trim();
+      const res = await fetch("/api/contacts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (res.ok) onDone();
       else { const d = await res.json() as { error: string }; setError(d.error ?? "Failed"); }
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black/50" onClick={onClose}>
-      <div className="mt-auto bg-white rounded-t-2xl p-5 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-lg text-gray-900">Add Contact</h2>
-          <button onClick={onClose} className="text-gray-400 text-2xl leading-none">&times;</button>
+    <div style={overlay} onClick={onClose}>
+      <div style={sheet} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#111827" }}>Add Contact</h2>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 26, color: "#9ca3af", cursor: "pointer", lineHeight: 1 }}>×</button>
         </div>
-
-        <div className="space-y-3">
-          {[
-            { key: "name", label: "Name *", placeholder: "Dr. Ramesh Nair", type: "text" },
-            { key: "phone", label: "Phone *", placeholder: "9876543210", type: "tel" },
-            { key: "referred_by", label: "Referred By", placeholder: "e.g. Kamal", type: "text" },
-            { key: "group_tag", label: "Group / List", placeholder: "e.g. Karnataka", type: "text" },
-            { key: "shared_interests", label: "Shared Interests", placeholder: "e.g. Paediatrics, IAN council", type: "text" },
-            { key: "remarks", label: "Remarks", placeholder: "Any notes...", type: "text" },
-          ].map(({ key, label, placeholder, type }) => (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {FIELDS.map(({ key, label: lbl, placeholder, type }) => (
             <div key={key}>
-              <label className="text-xs font-medium text-gray-600 block mb-1">{label}</label>
-              <input
-                type={type}
-                value={form[key as keyof typeof form]}
-                onChange={(e) => set(key, e.target.value)}
-                placeholder={placeholder}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              />
+              <label style={label}>{lbl}</label>
+              <input type={type} value={form[key] ?? ""} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} placeholder={placeholder} style={input} />
             </div>
           ))}
-
-          {error && <p className="text-red-600 text-sm">{error}</p>}
-
-          <button
-            onClick={handleSave}
-            disabled={loading}
-            className="w-full py-3 bg-blue-900 text-white rounded-xl font-semibold text-base active:opacity-70 disabled:opacity-40"
-          >
-            {loading ? "Saving..." : "Add Contact"}
+          {error && <p style={{ color: "#dc2626", fontSize: 14, margin: 0 }}>{error}</p>}
+          <button onClick={handleSave} disabled={loading} style={{ ...btn, opacity: loading ? 0.6 : 1, marginTop: 4 }}>
+            {loading ? "Saving…" : "Add Contact"}
           </button>
         </div>
       </div>
