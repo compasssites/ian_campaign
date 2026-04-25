@@ -31,7 +31,6 @@ const STATUSES: ContactStatus[] = ["pending", "spoke", "no_answer", "callback", 
 const editableColumns: Array<keyof MasterContact> = [
   "name",
   "phone",
-  "email",
   "referred_by",
   "group_tag",
   "shared_interests",
@@ -39,6 +38,18 @@ const editableColumns: Array<keyof MasterContact> = [
   "status",
   "notes",
 ];
+const emptyNewRow = {
+  name: "",
+  phone: "",
+  referred_by: "",
+  group_tag: "",
+  shared_interests: "",
+  remarks: "",
+  status: "pending" as ContactStatus,
+  notes: "",
+  wa_sent: 0,
+  email_sent: 0,
+};
 
 function formatDate(value?: string) {
   if (!value) return "-";
@@ -60,6 +71,8 @@ export default function MasterDatabase({ role, open, onClose }: Props) {
   const [search, setSearch] = useState("");
   const [savingId, setSavingId] = useState("");
   const [error, setError] = useState("");
+  const [newRow, setNewRow] = useState(emptyNewRow);
+  const [creating, setCreating] = useState(false);
 
   const canAccess = role === "admin" || role === "superadmin";
 
@@ -93,7 +106,6 @@ export default function MasterDatabase({ role, open, onClose }: Props) {
       [
         row.name,
         row.phone,
-        row.email,
         row.group_tag,
         row.referred_by,
         row.shared_interests,
@@ -150,13 +162,12 @@ export default function MasterDatabase({ role, open, onClose }: Props) {
   };
 
   const exportVisibleCsv = () => {
-    const headers = ["Name", "Phone", "Email", "Referred By", "Group", "Interests", "Remarks", "Status", "Notes", "WA Sent", "Email Sent", "Created", "Last Called", "Called By"];
+    const headers = ["Name", "Phone", "Referred By", "Group", "Interests", "Remarks", "Status", "Notes", "WA Sent", "Email Sent", "Created", "Last Called", "Called By"];
     const lines = [
       headers.join(","),
       ...filteredRows.map((row) => [
         csvEscape(row.name),
         csvEscape(row.phone),
-        csvEscape(row.email),
         csvEscape(row.referred_by),
         csvEscape(row.group_tag),
         csvEscape(row.shared_interests),
@@ -187,7 +198,6 @@ export default function MasterDatabase({ role, open, onClose }: Props) {
       <tr>
         <td>${row.name ?? ""}</td>
         <td>${row.phone ?? ""}</td>
-        <td>${row.email ?? ""}</td>
         <td>${row.referred_by ?? ""}</td>
         <td>${row.group_tag ?? ""}</td>
         <td>${row.shared_interests ?? ""}</td>
@@ -215,7 +225,7 @@ export default function MasterDatabase({ role, open, onClose }: Props) {
           <table>
             <thead>
               <tr>
-                <th>Name</th><th>Phone</th><th>Email</th><th>Referred By</th><th>Group</th><th>Interests</th><th>Remarks</th><th>Status</th><th>Notes</th><th>WA</th><th>Email</th>
+                <th>Name</th><th>Phone</th><th>Referred By</th><th>Group</th><th>Interests</th><th>Remarks</th><th>Status</th><th>Notes</th><th>WA</th><th>Email</th>
               </tr>
             </thead>
             <tbody>${rowsHtml}</tbody>
@@ -226,6 +236,55 @@ export default function MasterDatabase({ role, open, onClose }: Props) {
     printable.document.close();
     printable.focus();
     printable.print();
+  };
+
+  const createRow = async () => {
+    if (!newRow.name.trim() || !newRow.phone.trim()) {
+      setError("Name and phone are required for a new row.");
+      return;
+    }
+
+    setCreating(true);
+    setError("");
+    try {
+      const createResponse = await fetch("/api/contacts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newRow.name.trim(),
+          phone: newRow.phone.trim(),
+          referred_by: newRow.referred_by.trim(),
+          group_tag: newRow.group_tag.trim(),
+          shared_interests: newRow.shared_interests.trim(),
+          remarks: newRow.remarks.trim(),
+        }),
+      });
+
+      if (!createResponse.ok) {
+        const data = await createResponse.json().catch(() => ({ error: "Unable to add row" })) as { error?: string };
+        setError(data.error || "Unable to add row");
+        return;
+      }
+
+      const data = await createResponse.json() as { id: string };
+      if (newRow.status !== "pending" || newRow.notes.trim() || newRow.wa_sent || newRow.email_sent) {
+        await fetch(`/api/contacts/${data.id}/master`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: newRow.status,
+            notes: newRow.notes.trim(),
+            wa_sent: newRow.wa_sent,
+            email_sent: newRow.email_sent,
+          }),
+        });
+      }
+
+      setNewRow(emptyNewRow);
+      await fetchRows();
+    } finally {
+      setCreating(false);
+    }
   };
 
   if (!open || !canAccess) return null;
@@ -254,6 +313,7 @@ export default function MasterDatabase({ role, open, onClose }: Props) {
             onChange={(e) => setSearch(e.target.value)}
             style={{ flex: 1, border: "1.5px solid #dbe2ea", borderRadius: 10, padding: "10px 12px", fontSize: 14, outline: "none", minWidth: 240 }}
           />
+          <button onClick={() => { setError(""); setNewRow(emptyNewRow); }} style={{ background: "#dcfce7", color: "#166534", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Clear Add Row</button>
           <button onClick={fetchRows} style={{ background: "#e2e8f0", color: "#0f172a", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Refresh</button>
           <div style={{ fontSize: 13, color: "#64748b" }}>{filteredRows.length} rows</div>
         </div>
@@ -263,15 +323,47 @@ export default function MasterDatabase({ role, open, onClose }: Props) {
 
         {!loading && (
           <div style={{ flex: 1, overflow: "auto", background: "white" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1700 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1560 }}>
               <thead>
                 <tr style={{ position: "sticky", top: 0, background: "#eff6ff", zIndex: 2 }}>
-                  {["Name", "Phone", "Email", "Referred By", "Group", "Interests", "Remarks", "Status", "Notes", "WA", "Email", "Created", "Last Called", "Called By", "Action"].map((label) => (
+                  {["Name", "Phone", "Referred By", "Group", "Interests", "Remarks", "Status", "Notes", "WA", "Email", "Created", "Last Called", "Called By", "Action"].map((label) => (
                     <th key={label} style={{ borderBottom: "1px solid #cbd5e1", padding: "10px 8px", fontSize: 12, textAlign: "left", color: "#334155", whiteSpace: "nowrap" }}>{label}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
+                <tr style={{ background: "#f8fafc" }}>
+                  {editableColumns.map((key) => (
+                    <td key={key} style={{ borderBottom: "1px solid #dbe2ea", padding: 8, verticalAlign: "top" }}>
+                      {key === "status" ? (
+                        <select value={newRow.status} onChange={(e) => setNewRow((current) => ({ ...current, status: e.target.value as ContactStatus }))} style={{ width: "100%", border: "1px solid #86efac", borderRadius: 8, padding: "8px 9px", fontSize: 13, background: "white" }}>
+                          {STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
+                        </select>
+                      ) : (
+                        <input
+                          value={String(newRow[key as keyof typeof newRow] ?? "")}
+                          onChange={(e) => setNewRow((current) => ({ ...current, [key]: e.target.value }))}
+                          placeholder={key === "name" ? "Add new contact..." : ""}
+                          style={{ width: "100%", border: "1px solid #86efac", borderRadius: 8, padding: "8px 9px", fontSize: 13, background: "white" }}
+                        />
+                      )}
+                    </td>
+                  ))}
+                  <td style={{ borderBottom: "1px solid #dbe2ea", padding: 8 }}>
+                    <input type="checkbox" checked={Boolean(newRow.wa_sent)} onChange={(e) => setNewRow((current) => ({ ...current, wa_sent: e.target.checked ? 1 : 0 }))} />
+                  </td>
+                  <td style={{ borderBottom: "1px solid #dbe2ea", padding: 8 }}>
+                    <input type="checkbox" checked={Boolean(newRow.email_sent)} onChange={(e) => setNewRow((current) => ({ ...current, email_sent: e.target.checked ? 1 : 0 }))} />
+                  </td>
+                  <td style={{ borderBottom: "1px solid #dbe2ea", padding: 8, fontSize: 12, color: "#94a3b8" }}>-</td>
+                  <td style={{ borderBottom: "1px solid #dbe2ea", padding: 8, fontSize: 12, color: "#94a3b8" }}>-</td>
+                  <td style={{ borderBottom: "1px solid #dbe2ea", padding: 8, fontSize: 12, color: "#94a3b8" }}>-</td>
+                  <td style={{ borderBottom: "1px solid #dbe2ea", padding: 8 }}>
+                    <button onClick={createRow} disabled={creating} style={{ background: "#2563eb", color: "white", border: "none", borderRadius: 8, padding: "8px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", opacity: creating ? 0.7 : 1 }}>
+                      {creating ? "Adding..." : "Add Row"}
+                    </button>
+                  </td>
+                </tr>
                 {filteredRows.map((row) => (
                   <tr key={row.id}>
                     {editableColumns.map((key) => (
