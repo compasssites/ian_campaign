@@ -64,6 +64,15 @@ function csvEscape(value: unknown) {
   return /[",\n]/.test(text) ? `"${text.replace(/"/g, "\"\"")}"` : text;
 }
 
+function formatTitleCase(value: string) {
+  return value
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export default function MasterDatabase({ role, open, onClose }: Props) {
   const [rows, setRows] = useState<MasterContact[]>([]);
   const [drafts, setDrafts] = useState<Record<string, Partial<MasterContact>>>({});
@@ -88,7 +97,7 @@ export default function MasterDatabase({ role, open, onClose }: Props) {
         return;
       }
       const data = await response.json() as MasterContact[];
-      setRows(data);
+      setRows(data.map((row) => ({ ...row, name: formatTitleCase(row.name || "") })));
       setDrafts({});
     } finally {
       setLoading(false);

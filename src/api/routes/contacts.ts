@@ -18,6 +18,15 @@ function escapeCsv(value: string | number | null | undefined) {
   return text;
 }
 
+function toTitleCase(value: string) {
+  return value
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 contactRoutes.get("/", async (c) => {
   const { status, group, search, page } = c.req.query();
   const pageNum = parseInt(page ?? "1", 10);
@@ -177,7 +186,7 @@ contactRoutes.post("/", async (c) => {
   await c.env.DB.prepare(
     `INSERT INTO contacts (id, name, phone, email, referred_by, group_tag, shared_interests, remarks)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  ).bind(id, body.name.trim(), body.phone.trim(), body.email ?? null, body.referred_by ?? null,
+  ).bind(id, toTitleCase(body.name.trim()), body.phone.trim(), body.email ?? null, body.referred_by ?? null,
     body.group_tag ?? null, body.shared_interests ?? null, body.remarks ?? null).run();
 
   return c.json({ id }, 201);
@@ -205,7 +214,7 @@ contactRoutes.post("/bulk", async (c) => {
     let name: string, phone: string, city: string | null, refBy: string | null;
 
     if (parts.length >= 2) {
-      name = parts[0];
+      name = toTitleCase(parts[0]);
       phone = parts[1].replace(/\D/g, "").slice(-10);
       city = parts[2] ?? body.group_tag ?? null;
       refBy = parts[3] ?? body.referred_by ?? null;
@@ -213,7 +222,7 @@ contactRoutes.post("/bulk", async (c) => {
       // Try "Name Phone" with space separator
       const spaceIdx = line.search(/\s+\d/);
       if (spaceIdx === -1) { skipped.push(line); continue; }
-      name = line.slice(0, spaceIdx).trim();
+      name = toTitleCase(line.slice(0, spaceIdx).trim());
       phone = line.slice(spaceIdx).replace(/\D/g, "").slice(-10);
       city = body.group_tag ?? null;
       refBy = body.referred_by ?? null;
@@ -258,7 +267,9 @@ contactRoutes.patch("/:id", async (c) => {
   for (const key of allowed) {
     if (key in body) {
       sets.push(`${key} = ?`);
-      params.push((body as Record<string, string | number | null>)[key] ?? null);
+      const value = (body as Record<string, string | number | null>)[key];
+      if (key === "name" && typeof value === "string") params.push(toTitleCase(value.trim()));
+      else params.push(value ?? null);
     }
   }
   if (!sets.length) return c.json({ error: "Nothing to update" }, 400);
@@ -283,6 +294,8 @@ contactRoutes.patch("/:id/master", async (c) => {
       const value = (body as Record<string, string | number | null | undefined>)[key];
       if (key === "wa_sent" || key === "email_sent") {
         params.push(value ? 1 : 0);
+      } else if (key === "name" && typeof value === "string") {
+        params.push(toTitleCase(value.trim()));
       } else {
         params.push(value ?? null);
       }

@@ -84,6 +84,15 @@ function formatDoctorName(name: string) {
   return `Dr. ${trimmed}`;
 }
 
+function formatTitleCase(name: string) {
+  return name
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelete, onRefresh }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [showNote, setShowNote] = useState(false);
@@ -95,7 +104,8 @@ export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelet
   const status = (contact.status as ContactStatus) ?? "pending";
   const cfg = STATUS[status] ?? STATUS.pending;
   const hasPhone = !!(contact.phone && contact.phone.trim());
-  const contactName = formatDoctorName(contact.name?.trim() || "Doctor");
+  const displayName = formatTitleCase(contact.name?.trim() || "Doctor");
+  const contactName = formatDoctorName(displayName);
   const waMessages = [
     {
       key: "wa-mark",
@@ -141,7 +151,7 @@ export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelet
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const }}>
-            <span style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>{contact.name}</span>
+            <span style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>{displayName}</span>
             {status !== "pending" && (
               <span style={{ fontSize: 11, background: cfg.badgeBg, color: cfg.badgeColor, borderRadius: 20, padding: "2px 8px", fontWeight: 700 }}>{cfg.label}</span>
             )}
