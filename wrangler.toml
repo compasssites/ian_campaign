@@ -8,12 +8,12 @@ APP_URL = "https://ian-campaign.pages.dev"
 [[d1_databases]]
 binding = "DB"
 database_name = "ian-campaign-db"
-database_id = "REPLACE_WITH_D1_ID"
+database_id = "f524ab50-ee81-4091-9d34-811f56df165f"
 migrations_dir = "src/lib/db/migrations"
 
 [[kv_namespaces]]
 binding = "SESSIONS"
-id = "REPLACE_WITH_KV_ID"
+id = "516dae1aaa5b4ed3b82893e5725ea401"
 
 [assets]
 directory = "./dist"
