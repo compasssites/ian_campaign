@@ -84,24 +84,30 @@ contactRoutes.post("/bulk", async (c) => {
   const skipped: string[] = [];
 
   const stmt = c.env.DB.prepare(
-    `INSERT INTO contacts (id, name, phone, referred_by, group_tag)
+    `INSERT INTO contacts (id, name, phone, group_tag, referred_by)
      VALUES (?, ?, ?, ?, ?)`
   );
 
   for (const line of lines) {
-    // Support: "Name, Number", "Name Number", "Name, Number, ReferredBy"
+    // Support formats:
+    // "Name, Phone"
+    // "Name, Phone, City"
+    // "Name, Phone, City, ReferredBy"
     const parts = line.split(/,\s*/).map((p) => p.trim());
-    let name: string, phone: string, refBy: string | null;
+    let name: string, phone: string, city: string | null, refBy: string | null;
 
     if (parts.length >= 2) {
       name = parts[0];
       phone = parts[1].replace(/\D/g, "").slice(-10);
-      refBy = parts[2] ?? body.referred_by ?? null;
+      city = parts[2] ?? body.group_tag ?? null;
+      refBy = parts[3] ?? body.referred_by ?? null;
     } else {
+      // Try "Name Phone" with space separator
       const spaceIdx = line.search(/\s+\d/);
       if (spaceIdx === -1) { skipped.push(line); continue; }
       name = line.slice(0, spaceIdx).trim();
       phone = line.slice(spaceIdx).replace(/\D/g, "").slice(-10);
+      city = body.group_tag ?? null;
       refBy = body.referred_by ?? null;
     }
 
@@ -109,7 +115,7 @@ contactRoutes.post("/bulk", async (c) => {
 
     const id = ulid();
     try {
-      await stmt.bind(id, name, phone, refBy, body.group_tag ?? null).run();
+      await stmt.bind(id, name, phone, city, refBy).run();
       inserted.push(id);
     } catch {
       skipped.push(line);

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useId } from "react";
 import type { Contact, ContactStatus } from "../lib/db/schema";
 import StatsBar from "./StatsBar";
 import ContactCard from "./ContactCard";
@@ -102,6 +102,7 @@ export default function Dashboard({ memberName, role }: Props) {
   const [loading, setLoading] = useState(true);
   const [showBulk, setShowBulk] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [groups, setGroups] = useState<string[]>([]);
   const [activeGroup, setActiveGroup] = useState("");
   const [page, setPage] = useState(1);
@@ -168,8 +169,29 @@ export default function Dashboard({ memberName, role }: Props) {
           <div style={S.btnRow}>
             <button style={S.btnBlue} onClick={() => setShowAdd(true)}>+ Add</button>
             <button style={S.btnWhite} onClick={() => setShowBulk(true)}>Import</button>
-            {role === "superadmin" && <a href="/users" style={{ ...S.btnUsers, textDecoration: "none" }}>Users</a>}
-            <button style={S.btnGhost} onClick={logout}>Exit</button>
+            {/* Hamburger menu */}
+            <div style={{ position: "relative" }}>
+              <button
+                style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 10, padding: "8px 12px", cursor: "pointer", color: "white", fontSize: 18, lineHeight: 1 }}
+                onClick={() => setMenuOpen(v => !v)}
+              >
+                ☰
+              </button>
+              {menuOpen && (
+                <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, background: "white", borderRadius: 16, boxShadow: "0 8px 30px rgba(0,0,0,0.2)", minWidth: 180, overflow: "hidden", zIndex: 50 }}>
+                  {role === "superadmin" && (
+                    <a href="/users" style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", color: "#111827", textDecoration: "none", fontSize: 14, fontWeight: 600, borderBottom: "1px solid #f1f5f9" }}>
+                      👥 Manage Users
+                    </a>
+                  )}
+                  <button onClick={() => { setMenuOpen(false); window.location.href="/users"; }} style={{ display: role === "superadmin" ? "none" : "flex", width: "100%", alignItems: "center", gap: 10, padding: "14px 16px", background: "none", border: "none", fontSize: 14, fontWeight: 600, color: "#111827", cursor: "pointer", borderBottom: "1px solid #f1f5f9", textAlign: "left" }}>
+                  </button>
+                  <button onClick={() => { setMenuOpen(false); logout(); }} style={{ display: "flex", width: "100%", alignItems: "center", gap: 10, padding: "14px 16px", background: "none", border: "none", fontSize: 14, fontWeight: 600, color: "#dc2626", cursor: "pointer", textAlign: "left" }}>
+                    🚪 Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <StatsBar stats={stats} />
