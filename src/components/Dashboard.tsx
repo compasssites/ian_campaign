@@ -121,7 +121,7 @@ function GroupPicker({ groups, active, onChange }: { groups: string[]; active: s
 export default function Dashboard({ memberName, role }: Props) {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [stats, setStats] = useState({ total: 0, spoke: 0, no_answer: 0, wrong_number: 0, callback: 0, followed_up: 0, pending: 0, called: 0 });
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState("pending");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [showBulk, setShowBulk] = useState(false);
