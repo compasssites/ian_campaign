@@ -1,4 +1,4 @@
-const CACHE = "ian-v2";
+const CACHE = "ian-v3";
 
 self.addEventListener("install", (e) => {
   // Only cache static assets, never SSR pages

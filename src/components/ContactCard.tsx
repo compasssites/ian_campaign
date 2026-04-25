@@ -1,11 +1,13 @@
 import { useState } from "react";
 import type { Contact, ContactStatus } from "../lib/db/schema";
+import EditContact from "./EditContact";
 
 interface Props {
   contact: Contact;
   onStatusUpdate: (id: string, status: ContactStatus, notes?: string) => void;
   onToggle: (id: string, field: "wa_sent" | "email_sent", value: boolean) => void;
   onDelete: (id: string) => void;
+  onRefresh: () => void;
 }
 
 const STATUS: Record<string, { label: string; dot: string; bg: string; border: string; badgeBg: string; badgeColor: string }> = {
@@ -32,12 +34,13 @@ function PhoneIcon() {
   );
 }
 
-export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelete }: Props) {
+export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelete, onRefresh }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [showNote, setShowNote] = useState(false);
   const [note, setNote] = useState("");
   const [pendingStatus, setPendingStatus] = useState<ContactStatus | null>(null);
   const [confirmDel, setConfirmDel] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   const status = (contact.status as ContactStatus) ?? "pending";
   const cfg = STATUS[status] ?? STATUS.pending;
@@ -162,14 +165,31 @@ export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelet
             </div>
           )}
 
-          {!confirmDel
-            ? <button onClick={() => setConfirmDel(true)} style={{ background: "none", border: "none", color: "#fca5a5", fontSize: 12, textDecoration: "underline", cursor: "pointer", textAlign: "left", padding: 0 }}>Delete contact</button>
-            : <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => onDelete(contact.id)} style={{ flex: 1, background: "#ef4444", color: "white", border: "none", borderRadius: 10, padding: "10px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Confirm Delete</button>
-                <button onClick={() => setConfirmDel(false)} style={{ flex: 1, background: "#f3f4f6", color: "#374151", border: "none", borderRadius: 10, padding: "10px", fontSize: 13, cursor: "pointer" }}>Cancel</button>
-              </div>
-          }
+          {/* Edit + Delete row */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <button
+              onClick={() => setShowEdit(true)}
+              style={{ background: "#eff6ff", color: "#1d4ed8", border: "none", borderRadius: 10, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+            >
+              ✏️ Edit Details
+            </button>
+            {!confirmDel
+              ? <button onClick={() => setConfirmDel(true)} style={{ background: "none", border: "none", color: "#fca5a5", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Delete</button>
+              : <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => onDelete(contact.id)} style={{ background: "#ef4444", color: "white", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Confirm</button>
+                  <button onClick={() => setConfirmDel(false)} style={{ background: "#f3f4f6", color: "#374151", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, cursor: "pointer" }}>Cancel</button>
+                </div>
+            }
+          </div>
         </div>
+      )}
+
+      {showEdit && (
+        <EditContact
+          contact={contact}
+          onClose={() => setShowEdit(false)}
+          onDone={() => { setShowEdit(false); setExpanded(false); onRefresh(); }}
+        />
       )}
     </div>
   );

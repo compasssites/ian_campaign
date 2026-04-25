@@ -212,7 +212,7 @@ export default function Dashboard({ memberName, role }: Props) {
           </div>
         )}
         {!loading && contacts.map(c => (
-          <ContactCard key={c.id} contact={c} onStatusUpdate={handleStatusUpdate} onToggle={handleToggle} onDelete={handleDelete} />
+          <ContactCard key={c.id} contact={c} onStatusUpdate={handleStatusUpdate} onToggle={handleToggle} onDelete={handleDelete} onRefresh={refresh} />
         ))}
         {totalPages > 1 && (
           <div style={S.pagination}>
