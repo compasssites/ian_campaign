@@ -47,6 +47,8 @@ contactRoutes.get("/", async (c) => {
   if (status && status !== "all") {
     if (status === "pending") {
       sql += ` AND (cl.status IS NULL OR cl.status = 'pending')`;
+    } else if (status === "pending_missed") {
+      sql += ` AND (cl.status IS NULL OR cl.status = 'pending' OR cl.status = 'no_answer')`;
     } else {
       sql += ` AND cl.status = ?`;
       params.push(status);

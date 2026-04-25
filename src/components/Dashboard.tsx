@@ -36,13 +36,9 @@ const S = {
 };
 
 const TABS = [
-  { key: "all", label: "All" },
   { key: "pending", label: "Pending" },
-  { key: "spoke", label: "Spoke" },
-  { key: "no_answer", label: "Missed" },
-  { key: "wrong_number", label: "Wrong No." },
-  { key: "callback", label: "Callback" },
-  { key: "followed_up", label: "Done" },
+  { key: "pending_missed", label: "Pending + Missed" },
+  { key: "all", label: "All" },
 ];
 
 interface Props { memberName: string; role?: string; }
@@ -240,6 +236,7 @@ export default function Dashboard({ memberName, role }: Props) {
   const tabCount = (key: string) => {
     if (key === "all") return stats.total;
     if (key === "pending") return stats.pending;
+    if (key === "pending_missed") return stats.pending + stats.no_answer;
     return (stats as Record<string, number>)[key] ?? 0;
   };
   const canAccessMasterDb = isDesktop && (role === "admin" || role === "superadmin");
