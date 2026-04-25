@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import type { Contact } from "../../lib/db/schema";
+import type { Contact, ContactStatus } from "../../lib/db/schema";
 
 import type { Role } from "../../lib/auth/session";
 type Bindings = { DB: D1Database; SESSIONS: KVNamespace; CAMPAIGN_PIN: string };
@@ -110,6 +110,8 @@ contactRoutes.get("/export.csv", async (c) => {
     "Custom Field 2 - Value",
     "Custom Field 3 - Type",
     "Custom Field 3 - Value",
+    "Custom Field 4 - Type",
+    "Custom Field 4 - Value",
   ];
 
   const lines = [
@@ -132,6 +134,8 @@ contactRoutes.get("/export.csv", async (c) => {
         escapeCsv(contact.referred_by),
         "WhatsApp Sent",
         escapeCsv(contact.wa_sent ? "Yes" : "No"),
+        "Campaign Tag",
+        "ian-campaign",
       ].join(",");
     }),
   ];
@@ -143,6 +147,26 @@ contactRoutes.get("/export.csv", async (c) => {
       "Cache-Control": "no-store",
     },
   });
+});
+
+contactRoutes.get("/master", async (c) => {
+  const role = c.get("role");
+  if (role !== "admin" && role !== "superadmin") return c.json({ error: "Forbidden" }, 403);
+
+  const { results } = await c.env.DB.prepare(
+    `SELECT c.*,
+      cl.status,
+      cl.notes,
+      cl.called_at,
+      cl.called_by
+     FROM contacts c
+     LEFT JOIN call_logs cl ON cl.id = (
+       SELECT id FROM call_logs WHERE contact_id = c.id ORDER BY called_at DESC LIMIT 1
+     )
+     ORDER BY c.created_at DESC`
+  ).all<Contact>();
+
+  return c.json(results);
 });
 
 contactRoutes.post("/", async (c) => {
@@ -240,6 +264,54 @@ contactRoutes.patch("/:id", async (c) => {
   if (!sets.length) return c.json({ error: "Nothing to update" }, 400);
   params.push(id);
   await c.env.DB.prepare(`UPDATE contacts SET ${sets.join(", ")} WHERE id = ?`).bind(...params).run();
+  return c.json({ ok: true });
+});
+
+contactRoutes.patch("/:id/master", async (c) => {
+  const role = c.get("role");
+  if (role !== "admin" && role !== "superadmin") return c.json({ error: "Forbidden" }, 403);
+
+  const { id } = c.req.param();
+  const body = await c.req.json<Partial<Contact> & { status?: ContactStatus; notes?: string }>();
+
+  const sets: string[] = [];
+  const params: (string | number | null)[] = [];
+  const allowed = ["name", "phone", "email", "referred_by", "group_tag", "shared_interests", "remarks", "wa_sent", "email_sent"] as const;
+  for (const key of allowed) {
+    if (key in body) {
+      sets.push(`${key} = ?`);
+      const value = (body as Record<string, string | number | null | undefined>)[key];
+      if (key === "wa_sent" || key === "email_sent") {
+        params.push(value ? 1 : 0);
+      } else {
+        params.push(value ?? null);
+      }
+    }
+  }
+
+  if (sets.length) {
+    params.push(id);
+    await c.env.DB.prepare(`UPDATE contacts SET ${sets.join(", ")} WHERE id = ?`).bind(...params).run();
+  }
+
+  if (body.status !== undefined || body.notes !== undefined) {
+    const current = await c.env.DB.prepare(
+      `SELECT status, notes FROM call_logs WHERE contact_id = ? ORDER BY called_at DESC LIMIT 1`
+    ).bind(id).first<{ status?: ContactStatus; notes?: string | null }>();
+
+    const nextStatus = body.status ?? current?.status ?? "pending";
+    const nextNotes = body.notes ?? current?.notes ?? null;
+    const logId = ulid();
+    await c.env.DB.prepare(
+      `INSERT INTO call_logs (id, contact_id, called_by, called_by_user_id, status, notes)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    ).bind(logId, id, c.get("memberName") ?? null, c.get("userId") ?? null, nextStatus, nextNotes).run();
+  }
+
+  if (!sets.length && body.status === undefined && body.notes === undefined) {
+    return c.json({ error: "Nothing to update" }, 400);
+  }
+
   return c.json({ ok: true });
 });
 

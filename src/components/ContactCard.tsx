@@ -62,9 +62,26 @@ function WhatsAppIcon() {
   );
 }
 
-function getWhatsAppLink(phone: string, text: string) {
+function normalizeWhatsAppNumber(phone: string) {
   const digits = phone.replace(/\D/g, "");
-  return digits ? `https://wa.me/${digits}?text=${encodeURIComponent(text)}` : undefined;
+  if (!digits) return "";
+  if (digits.length === 10) return `91${digits}`;
+  if (digits.length === 11 && digits.startsWith("0")) return `91${digits.slice(1)}`;
+  if (digits.length === 12 && digits.startsWith("91")) return digits;
+  if (digits.length > 12) return `91${digits.slice(-10)}`;
+  return digits;
+}
+
+function getWhatsAppLink(phone: string, text: string) {
+  const normalized = normalizeWhatsAppNumber(phone);
+  return normalized ? `https://wa.me/${normalized}?text=${encodeURIComponent(text)}` : undefined;
+}
+
+function formatDoctorName(name: string) {
+  const trimmed = name.trim();
+  if (!trimmed) return "Doctor";
+  if (/^(dr\.?|doctor)\s+/i.test(trimmed)) return trimmed.replace(/^doctor\s+/i, "Dr. ");
+  return `Dr. ${trimmed}`;
 }
 
 export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelete, onRefresh }: Props) {
@@ -78,7 +95,7 @@ export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelet
   const status = (contact.status as ContactStatus) ?? "pending";
   const cfg = STATUS[status] ?? STATUS.pending;
   const hasPhone = !!(contact.phone && contact.phone.trim());
-  const contactName = contact.name?.trim() || "Doctor";
+  const contactName = formatDoctorName(contact.name?.trim() || "Doctor");
   const waMessages = [
     {
       key: "wa-mark",
@@ -90,14 +107,14 @@ export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelet
     {
       key: "wa-no-pickup",
       label: "No Pickup",
-      href: hasPhone ? getWhatsAppLink(contact.phone, `Hello ${contactName},\n\nThis is Dr. Sudhir Kothari from Poona. I tried calling you but couldn't get through. This is regarding the upcoming IAN election. Please let me know when I can call, or give me a call when you are free.`) : undefined,
+      href: hasPhone ? getWhatsAppLink(contact.phone, `Dear ${contactName},\n\nThis is Dr. Sudhir Kothari from Poona. I tried calling you but couldn't get through. This is regarding the upcoming IAN election. Please let me know when I can call, or give me a call when you are free.`) : undefined,
       active: false,
       onClick: undefined,
     },
     {
       key: "wa-picked-up",
       label: "Spoke",
-      href: hasPhone ? getWhatsAppLink(contact.phone, `Thanks, ${contactName}.\n\nIt was a pleasure speaking with you. Voting starts on 6 May and ends on 10 May. Thank you for your support.`) : undefined,
+      href: hasPhone ? getWhatsAppLink(contact.phone, `Dear ${contactName},\n\nIt was a pleasure speaking with you. Voting starts on 6 May and ends on 10 May. Thank you for your support.`) : undefined,
       active: false,
       onClick: undefined,
     },

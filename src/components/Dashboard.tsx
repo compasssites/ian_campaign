@@ -4,6 +4,7 @@ import StatsBar from "./StatsBar";
 import ContactCard from "./ContactCard";
 import BulkImport from "./BulkImport";
 import AddContact from "./AddContact";
+import MasterDatabase from "./MasterDatabase";
 
 const S = {
   root: { minHeight: "100vh", background: "#f1f5f9", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" } as React.CSSProperties,
@@ -133,6 +134,8 @@ export default function Dashboard({ memberName, role }: Props) {
   const [activeGroup, setActiveGroup] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [showMasterDb, setShowMasterDb] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
   const [currentPin, setCurrentPin] = useState("");
   const [newPin, setNewPin] = useState("");
@@ -165,6 +168,12 @@ export default function Dashboard({ memberName, role }: Props) {
 
   useEffect(() => { fetchStats(); fetchGroups(); }, []);
   useEffect(() => { const t = setTimeout(() => fetchContacts(1), 200); return () => clearTimeout(t); }, [activeTab, search, activeGroup, fetchContacts]);
+  useEffect(() => {
+    const sync = () => setIsDesktop(window.innerWidth >= 1024);
+    sync();
+    window.addEventListener("resize", sync);
+    return () => window.removeEventListener("resize", sync);
+  }, []);
 
   const refresh = useCallback(() => { fetchContacts(page); fetchStats(); }, [fetchContacts, page, fetchStats]);
 
@@ -232,6 +241,7 @@ export default function Dashboard({ memberName, role }: Props) {
     if (key === "pending") return stats.pending;
     return (stats as Record<string, number>)[key] ?? 0;
   };
+  const canAccessMasterDb = isDesktop && (role === "admin" || role === "superadmin");
 
   return (
     <div style={S.root}>
@@ -259,6 +269,7 @@ export default function Dashboard({ memberName, role }: Props) {
                       👥 Manage Users
                     </a>
                   )}
+                  {canAccessMasterDb && <MenuButton label="Master Database" icon="🗂️" onClick={() => { setMenuOpen(false); setShowMasterDb(true); }} />}
                   <MenuButton label="Export Contacts CSV" icon="⬇️" onClick={handleExport} />
                   <MenuButton label="Change PIN" icon="🔐" onClick={() => { setMenuOpen(false); setPinError(""); setShowPinModal(true); }} />
                   <MenuButton label="Sign Out" icon="🚪" danger onClick={() => { setMenuOpen(false); logout(); }} />
@@ -320,6 +331,7 @@ export default function Dashboard({ memberName, role }: Props) {
 
       {showBulk && <BulkImport onClose={() => setShowBulk(false)} onDone={() => { setShowBulk(false); fetchGroups(); refresh(); }} />}
       {showAdd && <AddContact onClose={() => setShowAdd(false)} onDone={() => { setShowAdd(false); refresh(); }} />}
+      <MasterDatabase role={role as "superadmin" | "admin" | "member" | undefined} open={showMasterDb} onClose={() => setShowMasterDb(false)} />
       {showPinModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, zIndex: 80 }}>
           <div style={{ width: "100%", maxWidth: 420, background: "white", borderRadius: 16, boxShadow: "0 12px 32px rgba(0,0,0,0.22)", padding: 18 }}>
