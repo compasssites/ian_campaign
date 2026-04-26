@@ -20,7 +20,7 @@ export default function BulkImport({ onClose, onDone }: Props) {
   const [pasteText, setPasteText] = useState("");
   const [groupTag, setGroupTag] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ inserted: number; skipped: number } | null>(null);
+  const [result, setResult] = useState<{ inserted: number; skipped: number; duplicates?: { line: string; existingName: string; phone: string }[] } | null>(null);
 
   const updateRow = (i: number, field: keyof Row, val: string) => {
     const next = [...rows];
@@ -200,11 +200,27 @@ export default function BulkImport({ onClose, onDone }: Props) {
             </button>
           </>
         ) : (
-          <div style={{ textAlign: "center", padding: "24px 0" }}>
-            <div style={{ fontSize: 56, marginBottom: 12 }}>✅</div>
-            <p style={{ fontSize: 22, fontWeight: 800, color: "#111827", margin: "0 0 6px" }}>{result.inserted} contacts imported</p>
-            {result.skipped > 0 && <p style={{ fontSize: 14, color: "#9ca3af", margin: 0 }}>{result.skipped} lines skipped</p>}
-            <button onClick={onDone} style={{ ...primaryBtn, marginTop: 24 }}>View Contacts</button>
+          <div style={{ padding: "8px 0" }}>
+            <div style={{ textAlign: "center", marginBottom: 20 }}>
+              <div style={{ fontSize: 52, marginBottom: 10 }}>✅</div>
+              <p style={{ fontSize: 22, fontWeight: 800, color: "#111827", margin: "0 0 4px" }}>{result.inserted} contacts imported</p>
+              {result.skipped > 0 && <p style={{ fontSize: 14, color: "#9ca3af", margin: 0 }}>{result.skipped} lines skipped (invalid format)</p>}
+            </div>
+            {result.duplicates && result.duplicates.length > 0 && (
+              <div style={{ background: "#fffbeb", border: "1.5px solid #fde68a", borderRadius: 14, padding: "14px 16px", marginBottom: 16 }}>
+                <p style={{ margin: "0 0 10px", fontSize: 14, fontWeight: 700, color: "#92400e" }}>
+                  ⚠️ {result.duplicates.length} duplicate{result.duplicates.length > 1 ? "s" : ""} skipped — number already in database
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 160, overflowY: "auto" }}>
+                  {result.duplicates.map((d, i) => (
+                    <div key={i} style={{ fontSize: 12, color: "#78350f", background: "rgba(255,255,255,0.6)", borderRadius: 8, padding: "6px 10px" }}>
+                      <strong>{d.phone}</strong> — already saved as <strong>{d.existingName}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <button onClick={onDone} style={primaryBtn}>View Contacts</button>
           </div>
         )}
       </div>

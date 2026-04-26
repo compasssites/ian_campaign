@@ -30,7 +30,7 @@ export default function AddContact({ onClose, onDone }: Props) {
       for (const [k, v] of Object.entries(form)) if (v.trim()) body[k] = v.trim();
       const res = await fetch("/api/contacts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       if (res.ok) onDone();
-      else { const d = await res.json() as { error: string }; setError(d.error ?? "Failed"); }
+      else { const d = await res.json() as { error: string; duplicate?: boolean }; setError(d.error ?? "Failed"); }
     } finally { setLoading(false); }
   };
 

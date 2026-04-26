@@ -64,13 +64,21 @@ function WhatsAppIcon() {
   );
 }
 
+function isIndianNumber(phone: string) {
+  const d = phone.replace(/\D/g, "");
+  if (d.length === 10 && /^[6-9]/.test(d)) return true;
+  if (d.length === 12 && d.startsWith("91") && /^[6-9]/.test(d.slice(2))) return true;
+  if (d.length === 13 && d.startsWith("091")) return true;
+  return false;
+}
+
 function normalizeWhatsAppNumber(phone: string) {
   const digits = phone.replace(/\D/g, "");
   if (!digits) return "";
   if (digits.length === 10) return `91${digits}`;
   if (digits.length === 11 && digits.startsWith("0")) return `91${digits.slice(1)}`;
   if (digits.length === 12 && digits.startsWith("91")) return digits;
-  if (digits.length > 12) return `91${digits.slice(-10)}`;
+  // International — use as-is, remove leading +
   return digits;
 }
 
@@ -106,6 +114,7 @@ export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelet
   const status = (contact.status as ContactStatus) ?? "pending";
   const cfg = STATUS[status] ?? STATUS.pending;
   const hasPhone = !!(contact.phone && contact.phone.trim());
+  const indian = hasPhone && isIndianNumber(contact.phone);
   const displayName = formatTitleCase(contact.name?.trim() || "Doctor");
   const contactName = formatDoctorName(displayName);
   const waMessages = [
@@ -179,27 +188,19 @@ export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelet
           <ChevronIcon expanded={expanded} />
         </div>
 
-        {hasPhone ? (
-          <a
-            href={`tel:${contact.phone}`}
-            onClick={e => e.stopPropagation()}
-            style={{
-              flexShrink: 0,
-              width: 46,
-              height: 46,
-              background: "linear-gradient(145deg, #1d4ed8, #2563eb)",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              textDecoration: "none",
-              boxShadow: "0 4px 12px rgba(37,99,235,0.4)",
-              transition: "transform 0.1s",
-            }}
-            onMouseDown={e => (e.currentTarget.style.transform = "scale(0.93)")}
-            onMouseUp={e => (e.currentTarget.style.transform = "scale(1)")}
-          >
+        {/* Call button: Indian = phone call, International = WA only, no number = grey */}
+        {hasPhone && indian ? (
+          <a href={`tel:${contact.phone}`} onClick={e => e.stopPropagation()}
+            style={{ flexShrink: 0, width: 46, height: 46, background: "linear-gradient(145deg,#1d4ed8,#2563eb)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none", boxShadow: "0 4px 12px rgba(37,99,235,0.4)" }}>
             <PhoneIcon />
+          </a>
+        ) : hasPhone && !indian ? (
+          // International number — WhatsApp only
+          <a href={getWhatsAppLink(contact.phone, `Dear ${contactName}, this is regarding the IAN election.`) ?? "#"}
+            target="_blank" rel="noopener" onClick={e => e.stopPropagation()}
+            title="International number — WhatsApp only"
+            style={{ flexShrink: 0, width: 46, height: 46, background: "linear-gradient(145deg,#16a34a,#22c55e)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none", boxShadow: "0 4px 12px rgba(22,163,74,0.4)" }}>
+            <WhatsAppIcon />
           </a>
         ) : (
           <div style={{ flexShrink: 0, width: 46, height: 46, background: "#f3f4f6", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>

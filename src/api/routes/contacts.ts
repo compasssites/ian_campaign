@@ -184,6 +184,12 @@ contactRoutes.post("/", async (c) => {
   const body = await c.req.json<Partial<Contact>>();
   if (!body.name || !body.phone) return c.json({ error: "Name and phone required" }, 400);
 
+  const phone = body.phone.trim().replace(/\D/g, "").slice(-12);
+  if (phone) {
+    const existing = await c.env.DB.prepare(`SELECT id, name FROM contacts WHERE phone = ?`).bind(phone).first<{ id: string; name: string }>();
+    if (existing) return c.json({ error: `This number already exists as "${existing.name}"`, duplicate: true, existingId: existing.id }, 409);
+  }
+
   const id = ulid();
   await c.env.DB.prepare(
     `INSERT INTO contacts (id, name, phone, email, referred_by, group_tag, shared_interests, remarks)
@@ -201,6 +207,7 @@ contactRoutes.post("/bulk", async (c) => {
   const lines = body.text.split("\n").map((l) => l.trim()).filter(Boolean);
   const inserted: string[] = [];
   const skipped: string[] = [];
+  const duplicates: { line: string; existingName: string; phone: string }[] = [];
 
   const stmt = c.env.DB.prepare(
     `INSERT INTO contacts (id, name, phone, group_tag, referred_by)
@@ -232,6 +239,13 @@ contactRoutes.post("/bulk", async (c) => {
 
     if (!name || phone.length < 7) { skipped.push(line); continue; }
 
+    // Check for duplicate phone before insert
+    const existing = await c.env.DB.prepare(`SELECT name FROM contacts WHERE phone = ?`).bind(phone).first<{ name: string }>();
+    if (existing) {
+      duplicates.push({ line, existingName: existing.name, phone });
+      continue;
+    }
+
     const id = ulid();
     try {
       await stmt.bind(id, name, phone, city, refBy).run();
@@ -241,7 +255,7 @@ contactRoutes.post("/bulk", async (c) => {
     }
   }
 
-  return c.json({ inserted: inserted.length, skipped: skipped.length });
+  return c.json({ inserted: inserted.length, skipped: skipped.length, duplicates });
 });
 
 contactRoutes.patch("/:id/toggles", async (c) => {
