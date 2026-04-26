@@ -51,6 +51,10 @@ contactRoutes.get("/", async (c) => {
       sql += ` AND (cl.status IS NULL OR cl.status = 'pending' OR cl.status = 'no_answer')`;
     } else if (status === "priority") {
       sql += ` AND c.priority = 1`;
+    } else if (status === "followup_must") {
+      sql += ` AND c.followup_type = 'must'`;
+    } else if (status === "followup_maybe") {
+      sql += ` AND c.followup_type = 'maybe'`;
     } else {
       sql += ` AND cl.status = ?`;
       params.push(status);
@@ -262,13 +266,14 @@ contactRoutes.post("/bulk", async (c) => {
 
 contactRoutes.patch("/:id/toggles", async (c) => {
   const { id } = c.req.param();
-  const body = await c.req.json<{ wa_sent?: boolean; email_sent?: boolean; priority?: boolean }>();
+  const body = await c.req.json<{ wa_sent?: boolean; email_sent?: boolean; priority?: boolean; followup_type?: string | null }>();
 
   const sets: string[] = [];
-  const params: (number | string)[] = [];
+  const params: (number | string | null)[] = [];
   if (body.wa_sent !== undefined) { sets.push("wa_sent = ?"); params.push(body.wa_sent ? 1 : 0); }
   if (body.email_sent !== undefined) { sets.push("email_sent = ?"); params.push(body.email_sent ? 1 : 0); }
   if (body.priority !== undefined) { sets.push("priority = ?"); params.push(body.priority ? 1 : 0); }
+  if ("followup_type" in body) { sets.push("followup_type = ?"); params.push(body.followup_type ?? null); }
   if (!sets.length) return c.json({ error: "Nothing to update" }, 400);
 
   params.push(id);

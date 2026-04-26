@@ -12,6 +12,7 @@ export interface Contact {
   wa_sent: number;
   email_sent: number;
   priority: number;
+  followup_type?: string | null;
   created_at: string;
   // joined from latest call_log
   status?: ContactStatus;

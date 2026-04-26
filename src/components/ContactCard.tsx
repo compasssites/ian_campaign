@@ -108,6 +108,8 @@ export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelet
   const [showNote, setShowNote] = useState(false);
   const [note, setNote] = useState("");
   const [pendingStatus, setPendingStatus] = useState<ContactStatus | null>(null);
+  const [postCallPriority, setPostCallPriority] = useState(!!contact.priority);
+  const [postCallFollowup, setPostCallFollowup] = useState<string | null>(contact.followup_type ?? null);
   const [confirmDel, setConfirmDel] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
 
@@ -143,12 +145,20 @@ export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelet
 
   const pick = (s: ContactStatus) => {
     setPendingStatus(s);
+    setPostCallPriority(!!contact.priority);
+    setPostCallFollowup(contact.followup_type ?? null);
     setShowNote(true);
   };
 
-  const save = () => {
+  const save = async () => {
     if (!pendingStatus) return;
     onStatusUpdate(contact.id, pendingStatus, note.trim() || undefined);
+    // Save priority + followup in parallel
+    await fetch(`/api/contacts/${contact.id}/toggles`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ priority: postCallPriority, followup_type: postCallFollowup }),
+    });
     setShowNote(false);
     setNote("");
     setPendingStatus(null);
@@ -185,6 +195,8 @@ export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelet
               <span style={{ fontSize: 11, background: "#dbeafe", color: "#1d4ed8", borderRadius: 20, padding: "2px 8px", fontWeight: 600 }}>{contact.group_tag}</span>
             )}
             {contact.wa_sent ? <span style={{ fontSize: 11, background: "#d1fae5", color: "#065f46", borderRadius: 20, padding: "2px 8px" }}>WA ✓</span> : null}
+            {contact.followup_type === "must"  && <span style={{ fontSize: 11, background: "#fee2e2", color: "#dc2626", borderRadius: 20, padding: "2px 8px", fontWeight: 700 }}>🔴 Must Follow Up</span>}
+            {contact.followup_type === "maybe" && <span style={{ fontSize: 11, background: "#fef3c7", color: "#92400e", borderRadius: 20, padding: "2px 8px", fontWeight: 700 }}>🟡 Maybe Follow Up</span>}
           </div>
           {contact.notes && (
             <p style={{ fontSize: 12, color: "#9ca3af", margin: "4px 0 0", fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>"{contact.notes}"</p>
@@ -238,19 +250,44 @@ export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelet
           )}
 
           {showNote && (
-            <div>
-              <p style={{ fontSize: 13, color: "#374151", margin: "0 0 8px" }}>
-                Marking as <strong style={{ color: STATUS[pendingStatus!]?.badgeColor }}>{STATUS[pendingStatus!]?.label}</strong> - add a note (optional):
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <p style={{ fontSize: 13, color: "#374151", margin: 0 }}>
+                Marking as <strong style={{ color: STATUS[pendingStatus!]?.badgeColor }}>{STATUS[pendingStatus!]?.label}</strong>
               </p>
+
+              {/* Follow-up type — prominent 3 buttons */}
+              <div>
+                <p style={{ fontSize: 12, fontWeight: 700, color: "#374151", margin: "0 0 6px" }}>Follow-up needed?</p>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {[
+                    { val: "must",  label: "🔴 Must Follow Up",  bg: postCallFollowup === "must"  ? "#dc2626" : "#f3f4f6", color: postCallFollowup === "must"  ? "white" : "#374151" },
+                    { val: "maybe", label: "🟡 Maybe",           bg: postCallFollowup === "maybe" ? "#f59e0b" : "#f3f4f6", color: postCallFollowup === "maybe" ? "white" : "#374151" },
+                    { val: null,    label: "No Follow-up",       bg: !postCallFollowup           ? "#e5e7eb" : "#f3f4f6", color: !postCallFollowup           ? "#374151" : "#9ca3af" },
+                  ].map(({ val, label, bg, color }) => (
+                    <button key={String(val)} onClick={() => setPostCallFollowup(val)}
+                      style={{ flex: 1, background: bg, color, border: "none", borderRadius: 10, padding: "9px 4px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Priority toggle */}
+              <button onClick={() => setPostCallPriority(v => !v)}
+                style={{ display: "flex", alignItems: "center", gap: 8, background: postCallPriority ? "#fef3c7" : "#f9fafb", border: `1.5px solid ${postCallPriority ? "#f59e0b" : "#e5e7eb"}`, borderRadius: 10, padding: "9px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600, color: postCallPriority ? "#92400e" : "#6b7280" }}>
+                <span style={{ fontSize: 18 }}>{postCallPriority ? "★" : "☆"}</span>
+                {postCallPriority ? "Marked as Priority" : "Mark as Priority"}
+              </button>
+
+              {/* Note */}
               <textarea
-                value={note}
-                onChange={e => setNote(e.target.value)}
-                placeholder="e.g. Very supportive, will vote · Call back Thursday..."
-                rows={2}
-                autoFocus
+                value={note} onChange={e => setNote(e.target.value)}
+                placeholder="Any notes from the call… (optional)"
+                rows={2} autoFocus
                 style={{ width: "100%", border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "10px 12px", fontSize: 14, resize: "none", outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
               />
-              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+
+              <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={save} style={{ flex: 1, background: "#1e3a8a", color: "white", border: "none", borderRadius: 10, padding: 12, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Save</button>
                 <button onClick={() => { setShowNote(false); setPendingStatus(null); setNote(""); }} style={{ flex: 1, background: "#f3f4f6", color: "#374151", border: "none", borderRadius: 10, padding: 12, fontSize: 14, cursor: "pointer" }}>Cancel</button>
               </div>

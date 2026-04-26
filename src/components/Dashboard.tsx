@@ -36,10 +36,11 @@ const S = {
 };
 
 const TABS = [
-  { key: "priority", label: "★ Priority" },
-  { key: "pending", label: "Pending" },
-  { key: "pending_missed", label: "Pending+Missed" },
-  { key: "all", label: "All" },
+  { key: "priority",      label: "★ Priority" },
+  { key: "pending",       label: "Pending" },
+  { key: "pending_missed",label: "Pending+Missed" },
+  { key: "followup_must", label: "🔴 Must Follow Up" },
+  { key: "all",           label: "All" },
 ];
 
 interface Props { memberName: string; role?: string; }
@@ -121,7 +122,7 @@ function GroupPicker({ groups, active, onChange }: { groups: string[]; active: s
 
 export default function Dashboard({ memberName, role }: Props) {
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [stats, setStats] = useState({ total: 0, spoke: 0, no_answer: 0, wrong_number: 0, callback: 0, followed_up: 0, pending: 0, called: 0 });
+  const [stats, setStats] = useState({ total: 0, spoke: 0, no_answer: 0, wrong_number: 0, callback: 0, followed_up: 0, pending: 0, called: 0, priority: 0, followup_must: 0 });
   const [activeTab, setActiveTab] = useState("pending");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -180,7 +181,7 @@ export default function Dashboard({ memberName, role }: Props) {
     refresh();
   }, [refresh]);
 
-  const handleToggle = useCallback(async (id: string, field: "wa_sent" | "email_sent", value: boolean) => {
+  const handleToggle = useCallback(async (id: string, field: "wa_sent" | "email_sent" | "priority", value: boolean) => {
     await fetch(`/api/contacts/${id}/toggles`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ [field]: value }) });
     refresh();
   }, [refresh]);
@@ -238,6 +239,8 @@ export default function Dashboard({ memberName, role }: Props) {
     if (key === "all") return stats.total;
     if (key === "pending") return stats.pending;
     if (key === "pending_missed") return stats.pending + stats.no_answer;
+    if (key === "followup_must") return stats.followup_must;
+    if (key === "priority") return stats.priority;
     return (stats as Record<string, number>)[key] ?? 0;
   };
   const canAccessMasterDb = isDesktop && (role === "admin" || role === "superadmin");
