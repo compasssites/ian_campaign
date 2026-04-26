@@ -122,7 +122,7 @@ export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelet
   const waMessages = [
     {
       key: "wa-mark",
-      label: contact.wa_sent ? "WA Marked" : "Mark WA",
+      label: contact.wa_sent ? "✓ WA Done" : "Mark WA Done",
       href: undefined,
       active: !!contact.wa_sent,
       onClick: () => onToggle(contact.id, "wa_sent", !contact.wa_sent),
@@ -298,13 +298,15 @@ export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelet
             <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 8px", fontWeight: 600 }}>WhatsApp actions:</p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
               {waMessages.map(({ key, label, href, active, onClick }) => {
+                // wa-mark: done=green, not done=teal outline; wa links=solid green
+                const isMarkBtn = !href && !!onClick;
                 const style: React.CSSProperties = {
                   minHeight: 42,
                   padding: "9px 8px",
                   borderRadius: 10,
-                  border: `1.5px solid ${active ? "transparent" : "#d1d5db"}`,
-                  background: active ? "#d1fae5" : href ? "#16a34a" : "#f9fafb",
-                  color: active ? "#065f46" : href ? "white" : "#374151",
+                  border: active ? "1.5px solid transparent" : isMarkBtn ? "1.5px solid #0d9488" : "none",
+                  background: active ? "#d1fae5" : href ? "#16a34a" : isMarkBtn ? "#f0fdfa" : "#f9fafb",
+                  color: active ? "#065f46" : href ? "white" : isMarkBtn ? "#0d9488" : "#374151",
                   fontSize: 12,
                   fontWeight: 700,
                   cursor: href || onClick ? "pointer" : "not-allowed",

@@ -93,7 +93,7 @@ function GroupPicker({ groups, active, onChange }: { groups: string[]; active: s
         <span style={{ fontSize: 10 }}>▾</span>
       </button>
       {open && (
-        <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 30, background: "white", borderRadius: 14, boxShadow: "0 8px 30px rgba(0,0,0,0.15)", border: "1px solid #e5e7eb", minWidth: 200, overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 30, background: "white", borderRadius: 14, boxShadow: "0 8px 30px rgba(0,0,0,0.18)", border: "1px solid #e5e7eb", width: "min(260px, 90vw)", overflow: "hidden" }}>
           <div style={{ padding: "10px 12px", borderBottom: "1px solid #f1f5f9" }}>
             <input
               autoFocus value={q} onChange={e => setQ(e.target.value)}
@@ -297,12 +297,21 @@ export default function Dashboard({ memberName, role }: Props) {
         <div style={{ flex: 1, position: "relative" }}>
           <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, pointerEvents: "none", color: "#9ca3af" }}>🔍</span>
           <input
-            style={S.searchInput}
+            style={{ ...S.searchInput, paddingRight: search ? 36 : 14 }}
             type="search"
             placeholder="Search name or number…"
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
           />
+          {search && (
+            <button
+              onClick={() => { setSearch(""); setPage(1); }}
+              style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "#e5e7eb", border: "none", borderRadius: "50%", width: 20, height: 20, cursor: "pointer", fontSize: 11, color: "#6b7280", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0 }}
+              aria-label="Clear search"
+            >
+              ✕
+            </button>
+          )}
         </div>
         <GroupPicker groups={groups} active={activeGroup} onChange={g => { setActiveGroup(g); setPage(1); }} />
       </div>
