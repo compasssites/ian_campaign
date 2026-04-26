@@ -5,7 +5,7 @@ import EditContact from "./EditContact";
 interface Props {
   contact: Contact;
   onStatusUpdate: (id: string, status: ContactStatus, notes?: string) => void;
-  onToggle: (id: string, field: "wa_sent" | "email_sent", value: boolean) => void;
+  onToggle: (id: string, field: "wa_sent" | "email_sent" | "priority", value: boolean) => void;
   onDelete: (id: string) => void;
   onRefresh: () => void;
 }
@@ -158,7 +158,14 @@ export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelet
   return (
     <div style={{ borderRadius: 16, border: `1.5px solid ${cfg.border}`, background: cfg.bg, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", cursor: "pointer" }} onClick={() => setExpanded(v => !v)}>
-        <div style={{ width: 10, height: 10, borderRadius: "50%", background: cfg.dot, flexShrink: 0 }} />
+        {/* Priority star — tap without expanding */}
+        <button
+          onClick={e => { e.stopPropagation(); onToggle(contact.id, "priority", !contact.priority); }}
+          style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0, fontSize: 18, lineHeight: 1, color: contact.priority ? "#f59e0b" : "#e5e7eb" }}
+          title={contact.priority ? "Remove priority" : "Mark as priority"}
+        >
+          ★
+        </button>
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const }}>

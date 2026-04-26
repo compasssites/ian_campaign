@@ -49,6 +49,8 @@ contactRoutes.get("/", async (c) => {
       sql += ` AND (cl.status IS NULL OR cl.status = 'pending')`;
     } else if (status === "pending_missed") {
       sql += ` AND (cl.status IS NULL OR cl.status = 'pending' OR cl.status = 'no_answer')`;
+    } else if (status === "priority") {
+      sql += ` AND c.priority = 1`;
     } else {
       sql += ` AND cl.status = ?`;
       params.push(status);
@@ -66,7 +68,7 @@ contactRoutes.get("/", async (c) => {
   const countSql = `SELECT COUNT(*) as total FROM (${sql})`;
   const countResult = await c.env.DB.prepare(countSql).bind(...params).first<{ total: number }>();
 
-  sql += ` ORDER BY c.created_at DESC LIMIT ? OFFSET ?`;
+  sql += ` ORDER BY c.priority DESC, c.created_at DESC LIMIT ? OFFSET ?`;
   params.push(limit, offset);
 
   const { results } = await c.env.DB.prepare(sql).bind(...params).all<Contact>();
@@ -260,12 +262,13 @@ contactRoutes.post("/bulk", async (c) => {
 
 contactRoutes.patch("/:id/toggles", async (c) => {
   const { id } = c.req.param();
-  const body = await c.req.json<{ wa_sent?: boolean; email_sent?: boolean }>();
+  const body = await c.req.json<{ wa_sent?: boolean; email_sent?: boolean; priority?: boolean }>();
 
   const sets: string[] = [];
   const params: (number | string)[] = [];
   if (body.wa_sent !== undefined) { sets.push("wa_sent = ?"); params.push(body.wa_sent ? 1 : 0); }
   if (body.email_sent !== undefined) { sets.push("email_sent = ?"); params.push(body.email_sent ? 1 : 0); }
+  if (body.priority !== undefined) { sets.push("priority = ?"); params.push(body.priority ? 1 : 0); }
   if (!sets.length) return c.json({ error: "Nothing to update" }, 400);
 
   params.push(id);

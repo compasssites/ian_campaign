@@ -11,6 +11,7 @@ export interface Contact {
   remarks?: string;
   wa_sent: number;
   email_sent: number;
+  priority: number;
   created_at: string;
   // joined from latest call_log
   status?: ContactStatus;
