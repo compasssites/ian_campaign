@@ -170,20 +170,49 @@ contactRoutes.get("/master", async (c) => {
   const role = c.get("role");
   if (role !== "admin" && role !== "superadmin") return c.json({ error: "Forbidden" }, 403);
 
-  const { results } = await c.env.DB.prepare(
-    `SELECT c.*,
-      cl.status,
-      cl.notes,
-      cl.called_at,
-      cl.called_by
-     FROM contacts c
-     LEFT JOIN call_logs cl ON cl.id = (
-       SELECT id FROM call_logs WHERE contact_id = c.id ORDER BY called_at DESC LIMIT 1
-     )
-     ORDER BY c.created_at DESC`
-  ).all<Contact>();
+  const { search, page, status, group } = c.req.query();
+  const pageNum = Math.max(1, parseInt(page ?? "1", 10));
+  const limit = 100;
+  const offset = (pageNum - 1) * limit;
 
-  return c.json(results);
+  let sql = `
+    SELECT c.*,
+      cl.status, cl.notes, cl.called_at, cl.called_by
+    FROM contacts c
+    LEFT JOIN call_logs cl ON cl.id = (
+      SELECT id FROM call_logs WHERE contact_id = c.id ORDER BY called_at DESC LIMIT 1
+    )
+    WHERE 1=1
+  `;
+  const params: (string | number)[] = [];
+
+  if (search) {
+    sql += ` AND (c.name LIKE ? OR c.phone LIKE ? OR c.group_tag LIKE ? OR c.referred_by LIKE ?)`;
+    const q = `%${search}%`;
+    params.push(q, q, q, q);
+  }
+  if (status && status !== "all") {
+    if (status === "pending") sql += ` AND (cl.status IS NULL OR cl.status = 'pending')`;
+    else sql += ` AND cl.status = ?`, params.push(status);
+  }
+  if (group) { sql += ` AND c.group_tag = ?`; params.push(group); }
+
+  const countResult = await c.env.DB.prepare(
+    `SELECT COUNT(*) as total FROM (${sql})`
+  ).bind(...params).first<{ total: number }>();
+
+  sql += ` ORDER BY c.priority DESC, c.created_at DESC LIMIT ? OFFSET ?`;
+  params.push(limit, offset);
+
+  const { results } = await c.env.DB.prepare(sql).bind(...params).all<Contact>();
+
+  return c.json({
+    rows: results,
+    total: countResult?.total ?? 0,
+    page: pageNum,
+    pages: Math.ceil((countResult?.total ?? 0) / limit),
+    limit,
+  });
 });
 
 contactRoutes.post("/", async (c) => {
@@ -356,6 +385,42 @@ contactRoutes.delete("/:id", async (c) => {
   const { id } = c.req.param();
   await c.env.DB.prepare(`DELETE FROM contacts WHERE id = ?`).bind(id).run();
   return c.json({ ok: true });
+});
+
+// Bulk action endpoint — single round-trip for many contacts
+contactRoutes.post("/bulk-action", async (c) => {
+  const body = await c.req.json<{ ids: string[]; action: string }>();
+  if (!body.ids?.length || !body.action) return c.json({ error: "ids and action required" }, 400);
+
+  const { ids, action } = body;
+  const placeholders = ids.map(() => "?").join(",");
+
+  if (action === "delete") {
+    await c.env.DB.prepare(`DELETE FROM contacts WHERE id IN (${placeholders})`).bind(...ids).run();
+  } else if (action === "priority_on") {
+    await c.env.DB.prepare(`UPDATE contacts SET priority = 1 WHERE id IN (${placeholders})`).bind(...ids).run();
+  } else if (action === "priority_off") {
+    await c.env.DB.prepare(`UPDATE contacts SET priority = 0 WHERE id IN (${placeholders})`).bind(...ids).run();
+  } else if (action === "followup_must") {
+    await c.env.DB.prepare(`UPDATE contacts SET followup_type = 'must' WHERE id IN (${placeholders})`).bind(...ids).run();
+  } else if (action === "followup_clear") {
+    await c.env.DB.prepare(`UPDATE contacts SET followup_type = NULL WHERE id IN (${placeholders})`).bind(...ids).run();
+  } else {
+    // Call status — insert call logs
+    const validStatuses = ["pending","spoke","no_answer","wrong_number","callback","followed_up"];
+    if (!validStatuses.includes(action)) return c.json({ error: "Invalid action" }, 400);
+    const stmt = c.env.DB.prepare(
+      `INSERT INTO call_logs (id, contact_id, called_by, status) VALUES (?, ?, ?, ?)`
+    );
+    const calledBy = c.get("memberName") ?? "Bulk";
+    const batch = ids.map(id => {
+      const lid = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`;
+      return stmt.bind(lid, id, calledBy, action);
+    });
+    await c.env.DB.batch(batch);
+  }
+
+  return c.json({ ok: true, count: ids.length });
 });
 
 contactRoutes.get("/groups", async (c) => {
