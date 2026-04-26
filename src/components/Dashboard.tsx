@@ -39,8 +39,6 @@ const TABS = [
   { key: "priority", label: "★ Priority" },
   { key: "pending", label: "Pending" },
   { key: "pending_missed", label: "Pending+Missed" },
-  { key: "spoke", label: "Spoke" },
-  { key: "callback", label: "Callback" },
   { key: "all", label: "All" },
 ];
 
