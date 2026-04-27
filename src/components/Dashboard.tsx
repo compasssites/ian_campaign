@@ -90,8 +90,15 @@ function GroupPicker({ groups, active, onChange }: { groups: string[]; active: s
     <div ref={ref} style={{ position: "relative", flexShrink: 0 }}>
       <button onClick={() => setOpen(v => !v)} style={S.groupBtn(!!active)}>
         <span>📍</span>
-        <span style={{ maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
-        <span style={{ fontSize: 10 }}>▾</span>
+        <span style={{ maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
+        {active
+          ? <span
+              onClick={e => { e.stopPropagation(); onChange(""); setOpen(false); }}
+              style={{ fontSize: 10, background: "#1e3a8a", color: "white", borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer" }}
+              title="Clear group filter"
+            >✕</span>
+          : <span style={{ fontSize: 10 }}>▾</span>
+        }
       </button>
       {open && (
         <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 30, background: "white", borderRadius: 14, boxShadow: "0 8px 30px rgba(0,0,0,0.18)", border: "1px solid #e5e7eb", width: "min(260px, 90vw)", overflow: "hidden" }}>
@@ -121,17 +128,28 @@ function GroupPicker({ groups, active, onChange }: { groups: string[]; active: s
   );
 }
 
+function getParam(key: string) {
+  if (typeof window === "undefined") return "";
+  return new URLSearchParams(window.location.search).get(key) ?? "";
+}
+function setParam(key: string, value: string) {
+  const params = new URLSearchParams(window.location.search);
+  if (value) params.set(key, value); else params.delete(key);
+  const next = params.toString();
+  window.history.replaceState({}, "", next ? `?${next}` : window.location.pathname);
+}
+
 export default function Dashboard({ memberName, role }: Props) {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [stats, setStats] = useState({ total: 0, spoke: 0, no_answer: 0, wrong_number: 0, callback: 0, followed_up: 0, pending: 0, called: 0, priority: 0, followup_must: 0 });
-  const [activeTab, setActiveTab] = useState("pending");
-  const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState(() => getParam("tab") || "pending");
+  const [search, setSearch] = useState(() => getParam("q") || "");
   const [loading, setLoading] = useState(true);
   const [showBulk, setShowBulk] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [groups, setGroups] = useState<string[]>([]);
-  const [activeGroup, setActiveGroup] = useState("");
+  const [activeGroup, setActiveGroup] = useState(() => getParam("group") || "");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isDesktop, setIsDesktop] = useState(false);
@@ -289,7 +307,7 @@ export default function Dashboard({ memberName, role }: Props) {
       {/* Filter tabs */}
       <div style={S.tabs}>
         {TABS.map(t => (
-          <button key={t.key} style={S.tab(activeTab === t.key)} onClick={() => { setActiveTab(t.key); setPage(1); }}>
+          <button key={t.key} style={S.tab(activeTab === t.key)} onClick={() => { setActiveTab(t.key); setParam("tab", t.key === "pending" ? "" : t.key); setPage(1); }}>
             {t.label} <span style={{ fontSize: 11, opacity: 0.7 }}>{tabCount(t.key)}</span>
           </button>
         ))}
@@ -304,11 +322,11 @@ export default function Dashboard({ memberName, role }: Props) {
             type="search"
             placeholder="Search name or number…"
             value={search}
-            onChange={e => { setSearch(e.target.value); setPage(1); }}
+            onChange={e => { setSearch(e.target.value); setParam("q", e.target.value); setPage(1); }}
           />
           {search && (
             <button
-              onClick={() => { setSearch(""); setPage(1); }}
+              onClick={() => { setSearch(""); setParam("q", ""); setPage(1); }}
               style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "#e5e7eb", border: "none", borderRadius: "50%", width: 20, height: 20, cursor: "pointer", fontSize: 11, color: "#6b7280", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0 }}
               aria-label="Clear search"
             >
@@ -316,7 +334,7 @@ export default function Dashboard({ memberName, role }: Props) {
             </button>
           )}
         </div>
-        <GroupPicker groups={groups} active={activeGroup} onChange={g => { setActiveGroup(g); setPage(1); }} />
+        <GroupPicker groups={groups} active={activeGroup} onChange={g => { setActiveGroup(g); setParam("group", g); setPage(1); }} />
       </div>
 
       {/* List */}
