@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Contact, ContactStatus } from "../lib/db/schema";
 import EditContact from "./EditContact";
-import { loadTemplates } from "./WaTemplateEditor";
+import { getTemplates, DEFAULT_TEMPLATES, type WaTemplates } from "./WaTemplateEditor";
 
 interface Props {
   contact: Contact;
@@ -127,7 +127,8 @@ export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelet
   const hasPhone = !!(contact.phone && contact.phone.trim());
   const indian = hasPhone && isIndianNumber(contact.phone);
   const displayName = formatTitleCase(contact.name?.trim() || "Doctor");
-  const templates = loadTemplates();
+  const [templates, setTemplates] = useState<WaTemplates>(DEFAULT_TEMPLATES);
+  useEffect(() => { getTemplates().then(setTemplates); }, []);
   const waMessages = [
     {
       key: "wa-mark",

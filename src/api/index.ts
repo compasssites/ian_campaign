@@ -5,6 +5,7 @@ import { contactRoutes } from "./routes/contacts";
 import { callRoutes } from "./routes/calls";
 import { statsRoutes } from "./routes/stats";
 import { userRoutes } from "./routes/users";
+import { settingsRoutes } from "./routes/settings";
 import { getSession, getTokenFromCookie, type Role } from "../lib/auth/session";
 
 type Bindings = { DB: D1Database; SESSIONS: KVNamespace; CAMPAIGN_PIN: string };
@@ -31,5 +32,6 @@ app.route("/api/contacts", contactRoutes);
 app.route("/api/calls", callRoutes);
 app.route("/api/stats", statsRoutes);
 app.route("/api/users", userRoutes);
+app.route("/api/settings", settingsRoutes);
 
 export { app };
