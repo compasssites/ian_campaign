@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Contact, ContactStatus } from "../lib/db/schema";
 import EditContact from "./EditContact";
+import { loadTemplates } from "./WaTemplateEditor";
 
 interface Props {
   contact: Contact;
@@ -87,11 +88,19 @@ function getWhatsAppLink(phone: string, text: string) {
   return normalized ? `https://wa.me/${normalized}?text=${encodeURIComponent(text)}` : undefined;
 }
 
-function formatDoctorName(name: string) {
-  const trimmed = name.trim();
-  if (!trimmed) return "Doctor";
-  if (/^(dr\.?|doctor)\s+/i.test(trimmed)) return trimmed.replace(/^doctor\s+/i, "Dr. ");
-  return `Dr. ${trimmed}`;
+function getFirstName(name: string): string {
+  // Strip Dr./Dr prefix, then take first word
+  const stripped = name.replace(/^(dr\.?\s*|doctor\s*)/i, "").trim();
+  return stripped.split(/\s+/)[0] || name;
+}
+
+function applyTemplate(template: string, name: string): string {
+  const firstName = getFirstName(name);
+  const drName = `Dr. ${firstName}`;
+  return template
+    .replace(/\{\{FIRSTNAME\}\}/g, firstName)
+    .replace(/\{\{FULLNAME\}\}/g, name)
+    .replace(/\{\{DRNAME\}\}/g, drName);
 }
 
 function formatTitleCase(name: string) {
@@ -118,7 +127,7 @@ export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelet
   const hasPhone = !!(contact.phone && contact.phone.trim());
   const indian = hasPhone && isIndianNumber(contact.phone);
   const displayName = formatTitleCase(contact.name?.trim() || "Doctor");
-  const contactName = formatDoctorName(displayName);
+  const templates = loadTemplates();
   const waMessages = [
     {
       key: "wa-mark",
@@ -130,14 +139,14 @@ export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelet
     {
       key: "wa-no-pickup",
       label: "No Pickup",
-      href: hasPhone ? getWhatsAppLink(contact.phone, `Dear ${contactName},\n\nThis is Dr. Sudhir Kothari from Poona. I tried calling you but couldn't get through. This is regarding the upcoming IAN election. Please let me know when I can call, or give me a call when you are free.`) : undefined,
+      href: hasPhone ? getWhatsAppLink(contact.phone, applyTemplate(templates.noPickup, displayName)) : undefined,
       active: false,
       onClick: undefined,
     },
     {
       key: "wa-picked-up",
       label: "Spoke",
-      href: hasPhone ? getWhatsAppLink(contact.phone, `Dear ${contactName},\n\nIt was a pleasure speaking with you. Voting starts on 6 May and ends on 10 May. Thank you for your support.`) : undefined,
+      href: hasPhone ? getWhatsAppLink(contact.phone, applyTemplate(templates.spoke, displayName)) : undefined,
       active: false,
       onClick: undefined,
     },
@@ -215,7 +224,7 @@ export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelet
           </a>
         ) : hasPhone && !indian ? (
           // International number — WhatsApp only
-          <a href={getWhatsAppLink(contact.phone, `Dear ${contactName}, this is regarding the IAN election.`) ?? "#"}
+          <a href={getWhatsAppLink(contact.phone, applyTemplate(templates.noPickup, displayName)) ?? "#"}
             target="_blank" rel="noopener" onClick={e => e.stopPropagation()}
             title="International number — WhatsApp only"
             style={{ flexShrink: 0, width: 46, height: 46, background: "linear-gradient(145deg,#16a34a,#22c55e)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none", boxShadow: "0 4px 12px rgba(22,163,74,0.4)" }}>

@@ -5,6 +5,7 @@ import ContactCard from "./ContactCard";
 import BulkImport from "./BulkImport";
 import AddContact from "./AddContact";
 import MasterDatabase from "./MasterDatabase";
+import WaTemplateEditor from "./WaTemplateEditor";
 
 const S = {
   root: { minHeight: "100vh", background: "#f1f5f9", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" } as React.CSSProperties,
@@ -136,6 +137,7 @@ export default function Dashboard({ memberName, role }: Props) {
   const [isDesktop, setIsDesktop] = useState(false);
   const [showMasterDb, setShowMasterDb] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
+  const [showWaEditor, setShowWaEditor] = useState(false);
   const [currentPin, setCurrentPin] = useState("");
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
@@ -273,6 +275,7 @@ export default function Dashboard({ memberName, role }: Props) {
                   )}
                   {canAccessMasterDb && <MenuButton label="Master Database" icon="🗂️" onClick={() => { setMenuOpen(false); setShowMasterDb(true); }} />}
                   <MenuButton label="Export Contacts CSV" icon="⬇️" onClick={handleExport} />
+                  <MenuButton label="Edit WA Templates" icon="💬" onClick={() => { setMenuOpen(false); setShowWaEditor(true); }} />
                   <MenuButton label="Change PIN" icon="🔐" onClick={() => { setMenuOpen(false); setPinError(""); setShowPinModal(true); }} />
                   <MenuButton label="Sign Out" icon="🚪" danger onClick={() => { setMenuOpen(false); logout(); }} />
                 </div>
@@ -343,6 +346,7 @@ export default function Dashboard({ memberName, role }: Props) {
       {showBulk && <BulkImport onClose={() => setShowBulk(false)} onDone={() => { setShowBulk(false); fetchGroups(); refresh(); }} />}
       {showAdd && <AddContact onClose={() => setShowAdd(false)} onDone={() => { setShowAdd(false); refresh(); }} />}
       <MasterDatabase role={role as "superadmin" | "admin" | "member" | undefined} open={showMasterDb} onClose={() => setShowMasterDb(false)} />
+      {showWaEditor && <WaTemplateEditor onClose={() => setShowWaEditor(false)} />}
       {showPinModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, zIndex: 80 }}>
           <div style={{ width: "100%", maxWidth: 420, background: "white", borderRadius: 16, boxShadow: "0 12px 32px rgba(0,0,0,0.22)", padding: 18 }}>
