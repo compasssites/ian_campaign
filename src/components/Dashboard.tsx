@@ -101,7 +101,7 @@ function GroupPicker({ groups, active, onChange }: { groups: string[]; active: s
         }
       </button>
       {open && (
-        <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 30, background: "white", borderRadius: 14, boxShadow: "0 8px 30px rgba(0,0,0,0.18)", border: "1px solid #e5e7eb", width: "min(260px, 90vw)", overflow: "hidden" }}>
+        <div style={{ position: "fixed", top: 120, right: 12, zIndex: 100, background: "white", borderRadius: 14, boxShadow: "0 8px 30px rgba(0,0,0,0.2)", border: "1px solid #e5e7eb", width: "min(280px, calc(100vw - 24px))", overflow: "hidden" }}>
           <div style={{ padding: "10px 12px", borderBottom: "1px solid #f1f5f9" }}>
             <input
               autoFocus value={q} onChange={e => setQ(e.target.value)}
@@ -128,15 +128,26 @@ function GroupPicker({ groups, active, onChange }: { groups: string[]; active: s
   );
 }
 
-function getParam(key: string) {
+// Use sessionStorage — survives Android Chrome backgrounding (unlike URL params which can get wiped)
+const SS_KEY = "ian_dash_filters";
+function loadFilters(): Record<string, string> {
+  try { return JSON.parse(sessionStorage.getItem(SS_KEY) ?? "{}"); } catch { return {}; }
+}
+function getParam(key: string): string {
+  // Try URL first (allows bookmarks/sharing), fall back to sessionStorage
   if (typeof window === "undefined") return "";
-  return new URLSearchParams(window.location.search).get(key) ?? "";
+  return new URLSearchParams(window.location.search).get(key) ?? loadFilters()[key] ?? "";
 }
 function setParam(key: string, value: string) {
+  // Write to both URL and sessionStorage
   const params = new URLSearchParams(window.location.search);
   if (value) params.set(key, value); else params.delete(key);
   const next = params.toString();
   window.history.replaceState({}, "", next ? `?${next}` : window.location.pathname);
+  // Also persist in sessionStorage for Android
+  const stored = loadFilters();
+  if (value) stored[key] = value; else delete stored[key];
+  sessionStorage.setItem(SS_KEY, JSON.stringify(stored));
 }
 
 export default function Dashboard({ memberName, role }: Props) {
@@ -306,16 +317,30 @@ export default function Dashboard({ memberName, role }: Props) {
         <StatsBar stats={stats} />
       </div>
 
-      {/* Filter tabs */}
-      <div style={S.tabs}>
+      {/* Filter tabs + LM sort + Group — all in one scrollable row */}
+      <div style={{ ...S.tabs, gap: 6 }}>
         {TABS.map(t => (
           <button key={t.key} style={S.tab(activeTab === t.key)} onClick={() => { setActiveTab(t.key); setParam("tab", t.key === "pending" ? "" : t.key); setPage(1); }}>
             {t.label} <span style={{ fontSize: 11, opacity: 0.7 }}>{tabCount(t.key)}</span>
           </button>
         ))}
+
+        {/* Divider */}
+        <span style={{ width: 1, background: "#e5e7eb", alignSelf: "stretch", flexShrink: 0 }} />
+
+        {/* LM sort */}
+        <button
+          onClick={() => { const n = sort === "lm_asc" ? "lm_desc" : sort === "lm_desc" ? "" : "lm_asc"; setSort(n); setParam("sort", n); setPage(1); }}
+          style={{ flexShrink: 0, padding: "7px 12px", borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: "pointer", border: "none", background: sort ? "#1e3a8a" : "#f1f5f9", color: sort ? "white" : "#6b7280", whiteSpace: "nowrap" as const }}
+        >
+          LM {sort === "lm_asc" ? "↑" : sort === "lm_desc" ? "↓" : "⇅"}
+        </button>
+
+        {/* Group filter — inline chip style, no dropdown overflow issues */}
+        <GroupPicker groups={groups} active={activeGroup} onChange={g => { setActiveGroup(g); setParam("group", g); setPage(1); }} />
       </div>
 
-      {/* Search + group picker */}
+      {/* Search — full width, clean */}
       <div style={S.filterRow}>
         <div style={{ flex: 1, position: "relative" }}>
           <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, pointerEvents: "none", color: "#9ca3af" }}>🔍</span>
@@ -330,30 +355,9 @@ export default function Dashboard({ memberName, role }: Props) {
             <button
               onClick={() => { setSearch(""); setParam("q", ""); setPage(1); }}
               style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "#e5e7eb", border: "none", borderRadius: "50%", width: 20, height: 20, cursor: "pointer", fontSize: 11, color: "#6b7280", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0 }}
-              aria-label="Clear search"
-            >
-              ✕
-            </button>
+            >✕</button>
           )}
         </div>
-        {/* LM sort toggle */}
-        <button
-          onClick={() => {
-            const next = sort === "lm_asc" ? "lm_desc" : sort === "lm_desc" ? "" : "lm_asc";
-            setSort(next); setParam("sort", next); setPage(1);
-          }}
-          title={sort === "lm_asc" ? "LM ↑ (tap for ↓)" : sort === "lm_desc" ? "LM ↓ (tap to clear)" : "Sort by LM number"}
-          style={{
-            flexShrink: 0, padding: "10px 12px", borderRadius: 12, fontSize: 12, fontWeight: 700, cursor: "pointer",
-            border: `1.5px solid ${sort ? "#1e3a8a" : "#e5e7eb"}`,
-            background: sort ? "#eff6ff" : "white",
-            color: sort ? "#1e3a8a" : "#6b7280",
-            whiteSpace: "nowrap" as const,
-          }}
-        >
-          LM {sort === "lm_asc" ? "↑" : sort === "lm_desc" ? "↓" : "⇅"}
-        </button>
-        <GroupPicker groups={groups} active={activeGroup} onChange={g => { setActiveGroup(g); setParam("group", g); setPage(1); }} />
       </div>
 
       {/* List */}
