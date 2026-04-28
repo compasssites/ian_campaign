@@ -158,9 +158,9 @@ export default function MasterDatabase({ role, open, onClose }: Props) {
 
   // ── Export ───────────────────────────────────────────────────────────
   const exportCsv = () => {
-    const headers = ["Name","Phone","Group","Referred By","Status","Notes","Priority","Follow Up","WA","Created","Last Called","Called By"];
+    const headers = ["Name","Phone","LM No","Group","Referred By","Status","Notes","Priority","Follow Up","WA","Created","Last Called","Called By"];
     const lines = [headers.join(","), ...data.rows.map(r => [
-      csvEscape(r.name), csvEscape(r.phone), csvEscape(r.group_tag), csvEscape(r.referred_by),
+      csvEscape(r.name), csvEscape(r.phone), csvEscape(r.lm_number), csvEscape(r.group_tag), csvEscape(r.referred_by),
       csvEscape(r.status), csvEscape(r.notes), csvEscape(r.priority?"Yes":"No"),
       csvEscape(r.followup_type||""), csvEscape(r.wa_sent?"Yes":"No"),
       csvEscape(r.created_at), csvEscape(r.called_at), csvEscape(r.called_by),
@@ -247,7 +247,7 @@ export default function MasterDatabase({ role, open, onClose }: Props) {
                 <th style={{ ...th, width:36, textAlign:"center" }}>
                   <input type="checkbox" checked={allSelected} onChange={toggleAll} style={{ width:15, height:15, cursor:"pointer" }} />
                 </th>
-                {["Name","Phone","Group","Referred By","Status","Notes","★","Follow Up","WA","Created","Last Called","Called By",""].map(h => (
+                {["Name","Phone","LM No","Group","Referred By","Status","Notes","★","Follow Up","WA","Created","Last Called","Called By",""].map(h => (
                   <th key={h} style={th}>{h}</th>
                 ))}
               </tr>
@@ -270,7 +270,7 @@ export default function MasterDatabase({ role, open, onClose }: Props) {
                       <input type="checkbox" checked={isSelected} onChange={() => toggleOne(row.id)} style={{ width:15, height:15, cursor:"pointer" }} />
                     </td>
                     {/* Editable cells */}
-                    {(["name","phone","group_tag","referred_by"] as (keyof MasterContact)[]).map(key => (
+                    {(["name","phone","lm_number","group_tag","referred_by"] as (keyof MasterContact)[]).map(key => (
                       <td key={key} style={td}>
                         <input value={String(getValue(row,key)??"")} onChange={e => updateDraft(row.id, key, e.target.value)} style={inp} />
                       </td>

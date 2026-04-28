@@ -150,6 +150,7 @@ export default function Dashboard({ memberName, role }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [groups, setGroups] = useState<string[]>([]);
   const [activeGroup, setActiveGroup] = useState(() => getParam("group") || "");
+  const [sort, setSort] = useState(() => getParam("sort") || "");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isDesktop, setIsDesktop] = useState(false);
@@ -177,16 +178,17 @@ export default function Dashboard({ memberName, role }: Props) {
       if (activeTab !== "all") params.set("status", activeTab);
       if (search) params.set("search", search);
       if (activeGroup) params.set("group", activeGroup);
+      if (sort) params.set("sort", sort);
       const r = await fetch(`/api/contacts?${params}`);
       if (r.ok) {
         const data = await r.json() as { contacts: Contact[]; total: number; pages: number };
         setContacts(data.contacts); setTotalPages(data.pages); setPage(p);
       }
     } finally { setLoading(false); }
-  }, [activeTab, search, activeGroup]);
+  }, [activeTab, search, activeGroup, sort]);
 
   useEffect(() => { fetchStats(); fetchGroups(); }, []);
-  useEffect(() => { const t = setTimeout(() => fetchContacts(1), 200); return () => clearTimeout(t); }, [activeTab, search, activeGroup, fetchContacts]);
+  useEffect(() => { const t = setTimeout(() => fetchContacts(1), 200); return () => clearTimeout(t); }, [activeTab, search, activeGroup, sort, fetchContacts]);
   useEffect(() => {
     const sync = () => setIsDesktop(window.innerWidth >= 1024);
     sync();
@@ -334,6 +336,23 @@ export default function Dashboard({ memberName, role }: Props) {
             </button>
           )}
         </div>
+        {/* LM sort toggle */}
+        <button
+          onClick={() => {
+            const next = sort === "lm_asc" ? "lm_desc" : sort === "lm_desc" ? "" : "lm_asc";
+            setSort(next); setParam("sort", next); setPage(1);
+          }}
+          title={sort === "lm_asc" ? "LM ↑ (tap for ↓)" : sort === "lm_desc" ? "LM ↓ (tap to clear)" : "Sort by LM number"}
+          style={{
+            flexShrink: 0, padding: "10px 12px", borderRadius: 12, fontSize: 12, fontWeight: 700, cursor: "pointer",
+            border: `1.5px solid ${sort ? "#1e3a8a" : "#e5e7eb"}`,
+            background: sort ? "#eff6ff" : "white",
+            color: sort ? "#1e3a8a" : "#6b7280",
+            whiteSpace: "nowrap" as const,
+          }}
+        >
+          LM {sort === "lm_asc" ? "↑" : sort === "lm_desc" ? "↓" : "⇅"}
+        </button>
         <GroupPicker groups={groups} active={activeGroup} onChange={g => { setActiveGroup(g); setParam("group", g); setPage(1); }} />
       </div>
 

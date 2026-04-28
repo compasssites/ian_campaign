@@ -190,6 +190,9 @@ export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelet
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const }}>
             <span style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>{displayName}</span>
+            {contact.lm_number && (
+              <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500, letterSpacing: "0.2px" }}>{contact.lm_number}</span>
+            )}
             {status !== "pending" && (
               <span style={{ fontSize: 11, background: cfg.badgeBg, color: cfg.badgeColor, borderRadius: 20, padding: "2px 8px", fontWeight: 700 }}>{cfg.label}</span>
             )}

@@ -14,18 +14,20 @@ const inp: React.CSSProperties = { width: "100%", border: "1.5px solid #e5e7eb",
 const saveBtn: React.CSSProperties = { width: "100%", padding: 15, background: "linear-gradient(135deg, #1e3a8a, #2563eb)", color: "white", border: "none", borderRadius: 14, fontSize: 16, fontWeight: 700, cursor: "pointer", marginTop: 4 };
 
 const FIELDS: { key: keyof Contact; label: string; placeholder: string; type: string }[] = [
-  { key: "name",             label: "Name *",           placeholder: "Dr. Ramesh Nair",         type: "text" },
-  { key: "phone",            label: "Phone",            placeholder: "9876543210",               type: "tel" },
-  { key: "referred_by",      label: "Referred By",      placeholder: "e.g. Kamal",               type: "text" },
-  { key: "group_tag",        label: "Group / City",     placeholder: "e.g. Bangalore",           type: "text" },
+  { key: "name",             label: "Name *",           placeholder: "Dr. Ramesh Nair",              type: "text" },
+  { key: "phone",            label: "Phone",            placeholder: "9876543210",                   type: "tel" },
+  { key: "lm_number",       label: "LM Number",        placeholder: "e.g. LM-338",                  type: "text" },
+  { key: "referred_by",      label: "Referred By",      placeholder: "e.g. Kamal",                  type: "text" },
+  { key: "group_tag",        label: "Group / City",     placeholder: "e.g. Bangalore",              type: "text" },
   { key: "shared_interests", label: "Shared Interests", placeholder: "e.g. Paediatrics, IAN council", type: "text" },
-  { key: "remarks",          label: "Remarks / Notes",  placeholder: "Any extra notes…",         type: "text" },
+  { key: "remarks",          label: "Remarks / Notes",  placeholder: "Any extra notes…",            type: "text" },
 ];
 
 export default function EditContact({ contact, onClose, onDone }: Props) {
   const [form, setForm] = useState<Record<string, string>>({
     name:             contact.name ?? "",
     phone:            contact.phone ?? "",
+    lm_number:        contact.lm_number ?? "",
     referred_by:      contact.referred_by ?? "",
     group_tag:        contact.group_tag ?? "",
     shared_interests: contact.shared_interests ?? "",

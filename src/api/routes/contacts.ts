@@ -28,7 +28,7 @@ function toTitleCase(value: string) {
 }
 
 contactRoutes.get("/", async (c) => {
-  const { status, group, search, page } = c.req.query();
+  const { status, group, search, page, sort } = c.req.query();
   const pageNum = parseInt(page ?? "1", 10);
   const limit = 50;
   const offset = (pageNum - 1) * limit;
@@ -72,7 +72,12 @@ contactRoutes.get("/", async (c) => {
   const countSql = `SELECT COUNT(*) as total FROM (${sql})`;
   const countResult = await c.env.DB.prepare(countSql).bind(...params).first<{ total: number }>();
 
-  sql += ` ORDER BY c.priority DESC, c.created_at DESC LIMIT ? OFFSET ?`;
+  const orderBy = sort === "lm_asc"
+    ? `CASE WHEN c.lm_number IS NULL OR c.lm_number = '' THEN 1 ELSE 0 END, CAST(REPLACE(COALESCE(c.lm_number,'0'),'LM-','') AS INTEGER) ASC`
+    : sort === "lm_desc"
+    ? `CASE WHEN c.lm_number IS NULL OR c.lm_number = '' THEN 1 ELSE 0 END, CAST(REPLACE(COALESCE(c.lm_number,'0'),'LM-','') AS INTEGER) DESC`
+    : `c.priority DESC, c.created_at DESC`;
+  sql += ` ORDER BY ${orderBy} LIMIT ? OFFSET ?`;
   params.push(limit, offset);
 
   const { results } = await c.env.DB.prepare(sql).bind(...params).all<Contact>();
@@ -340,7 +345,7 @@ contactRoutes.patch("/:id/master", async (c) => {
 
   const sets: string[] = [];
   const params: (string | number | null)[] = [];
-  const allowed = ["name", "phone", "email", "referred_by", "group_tag", "shared_interests", "remarks", "wa_sent", "email_sent"] as const;
+  const allowed = ["name", "phone", "email", "referred_by", "group_tag", "shared_interests", "remarks", "wa_sent", "email_sent", "lm_number"] as const;
   for (const key of allowed) {
     if (key in body) {
       sets.push(`${key} = ?`);

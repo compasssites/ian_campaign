@@ -13,6 +13,7 @@ export interface Contact {
   email_sent: number;
   priority: number;
   followup_type?: string | null;
+  lm_number?: string | null;
   created_at: string;
   // joined from latest call_log
   status?: ContactStatus;
