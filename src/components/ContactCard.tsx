@@ -88,6 +88,28 @@ function getWhatsAppLink(phone: string, text: string) {
   return normalized ? `https://wa.me/${normalized}?text=${encodeURIComponent(text)}` : undefined;
 }
 
+function normalizeSmsNumber(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.length === 10) return `+91${digits}`;
+  if (digits.length === 11 && digits.startsWith("0")) return `+91${digits.slice(1)}`;
+  if (digits.length === 12 && digits.startsWith("91")) return `+${digits}`;
+  return digits.startsWith("+") ? digits : `+${digits}`;
+}
+
+function getSmsLink(phone: string, text: string) {
+  const normalized = normalizeSmsNumber(phone);
+  return normalized ? `sms:${normalized}?body=${encodeURIComponent(text)}` : undefined;
+}
+
+function SmsIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
 function getFirstName(name: string): string {
   // Strip Dr./Dr prefix, then take first word
   const stripped = name.replace(/^(dr\.?\s*|doctor\s*)/i, "").trim();
@@ -150,6 +172,19 @@ export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelet
       href: hasPhone ? getWhatsAppLink(contact.phone, applyTemplate(templates.spoke, displayName)) : undefined,
       active: false,
       onClick: undefined,
+    },
+  ];
+
+  const smsMessages = [
+    {
+      key: "sms-no-pickup",
+      label: "No Pickup",
+      href: hasPhone ? getSmsLink(contact.phone, applyTemplate(templates.noPickup, displayName)) : undefined,
+    },
+    {
+      key: "sms-spoke",
+      label: "Spoke",
+      href: hasPhone ? getSmsLink(contact.phone, applyTemplate(templates.spoke, displayName)) : undefined,
     },
   ];
 
@@ -311,7 +346,6 @@ export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelet
             <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 8px", fontWeight: 600 }}>WhatsApp actions:</p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
               {waMessages.map(({ key, label, href, active, onClick }) => {
-                // wa-mark: done=green, not done=teal outline; wa links=solid green
                 const isMarkBtn = !href && !!onClick;
                 const style: React.CSSProperties = {
                   minHeight: 42,
@@ -348,6 +382,40 @@ export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelet
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          <div>
+            <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 8px", fontWeight: 600 }}>SMS actions:</p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+              {smsMessages.map(({ key, label, href }) => (
+                <a
+                  key={key}
+                  href={href ?? "#"}
+                  onClick={e => { e.stopPropagation(); if (!href) e.preventDefault(); }}
+                  style={{
+                    minHeight: 42,
+                    padding: "9px 8px",
+                    borderRadius: 10,
+                    border: "none",
+                    background: href ? "#0ea5e9" : "#f3f4f6",
+                    color: href ? "white" : "#9ca3af",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: href ? "pointer" : "not-allowed",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    textDecoration: "none",
+                    boxSizing: "border-box",
+                    opacity: href ? 1 : 0.55,
+                  }}
+                >
+                  <SmsIcon />
+                  <span>{label}</span>
+                </a>
+              ))}
             </div>
           </div>
 
