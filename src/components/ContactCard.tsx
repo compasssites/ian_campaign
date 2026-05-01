@@ -102,10 +102,17 @@ function getSmsLink(phone: string, text: string) {
   return normalized ? `sms:${normalized}?body=${encodeURIComponent(text)}` : undefined;
 }
 
-function getSaveContactLink(phone: string, name: string) {
+function downloadVCard(phone: string, name: string) {
   const digits = phone.replace(/\D/g, "");
   const e164 = digits.length === 10 ? `+91${digits}` : digits.length === 12 && digits.startsWith("91") ? `+${digits}` : `+${digits}`;
-  return `intent:#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.dir%2Fcontact;S.name=${encodeURIComponent(name)};S.phone=${encodeURIComponent(e164)};end`;
+  const vcf = `BEGIN:VCARD\r\nVERSION:3.0\r\nFN:${name}\r\nTEL;TYPE=CELL:${e164}\r\nEND:VCARD\r\n`;
+  const blob = new Blob([vcf], { type: "text/vcard" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${name.replace(/\s+/g, "_")}.vcf`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function SmsIcon() {
@@ -433,14 +440,13 @@ export default function ContactCard({ contact, onStatusUpdate, onToggle, onDelet
           )}
 
           {hasPhone && (
-            <a
-              href={getSaveContactLink(contact.phone, displayName)}
-              onClick={e => e.stopPropagation()}
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#f0fdf4", color: "#15803d", border: "1.5px solid #bbf7d0", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, textDecoration: "none" }}
+            <button
+              onClick={e => { e.stopPropagation(); downloadVCard(contact.phone, displayName); }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#f0fdf4", color: "#15803d", border: "1.5px solid #bbf7d0", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", width: "100%" }}
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
               Save to Phone Contacts
-            </a>
+            </button>
           )}
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
