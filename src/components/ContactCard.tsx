@@ -105,13 +105,15 @@ function getSmsLink(phone: string, text: string) {
 function downloadVCard(phone: string, name: string, city?: string) {
   const digits = phone.replace(/\D/g, "");
   const e164 = digits.length === 10 ? `+91${digits}` : digits.length === 12 && digits.startsWith("91") ? `+${digits}` : `+${digits}`;
-  const fullName = city ? `${name} ${city}` : name;
-  const vcf = `BEGIN:VCARD\r\nVERSION:3.0\r\nFN:${fullName}\r\nTEL;TYPE=CELL:${e164}\r\nEND:VCARD\r\n`;
+  // Strip leading "Dr." prefix so vCard parsers don't double it
+  const nameOnly = name.replace(/^dr\.?\s*/i, "").trim();
+  const displayFN = city ? `Dr. ${nameOnly} ${city}` : `Dr. ${nameOnly}`;
+  const vcf = `BEGIN:VCARD\r\nVERSION:3.0\r\nFN:${displayFN}\r\nN:${nameOnly};;;Dr.;\r\nTEL;TYPE=CELL:${e164}\r\nEND:VCARD\r\n`;
   const blob = new Blob([vcf], { type: "text/vcard" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${fullName.replace(/\s+/g, "_")}.vcf`;
+  a.download = `${displayFN.replace(/\s+/g, "_")}.vcf`;
   a.click();
   URL.revokeObjectURL(url);
 }
