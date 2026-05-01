@@ -108,7 +108,11 @@ function downloadVCard(phone: string, name: string, city?: string) {
   // Strip leading "Dr." prefix so vCard parsers don't double it
   const nameOnly = name.replace(/^dr\.?\s*/i, "").trim();
   const displayFN = city ? `Dr. ${nameOnly} ${city}` : `Dr. ${nameOnly}`;
-  const vcf = `BEGIN:VCARD\r\nVERSION:3.0\r\nFN:${displayFN}\r\nN:${nameOnly};;;Dr.;\r\nTEL;TYPE=CELL:${e164}\r\nEND:VCARD\r\n`;
+  // N field: Lastname;Firstname;Middle;Prefix;Suffix — append city to lastname so macOS shows it
+  const nameParts = nameOnly.split(/\s+/);
+  const lastName = city ? `${nameParts.slice(1).join(" ")} ${city}`.trim() : nameParts.slice(1).join(" ");
+  const firstName = nameParts[0] ?? "";
+  const vcf = `BEGIN:VCARD\r\nVERSION:3.0\r\nFN:${displayFN}\r\nN:${lastName};${firstName};;Dr.;\r\nTEL;TYPE=CELL:${e164}\r\nEND:VCARD\r\n`;
   const blob = new Blob([vcf], { type: "text/vcard" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
