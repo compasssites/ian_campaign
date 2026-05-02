@@ -161,7 +161,7 @@ export default function Dashboard({ memberName, role }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [groups, setGroups] = useState<string[]>([]);
   const [activeGroup, setActiveGroup] = useState(() => getParam("group") || "");
-  const [sort, setSort] = useState(() => getParam("sort") || "");
+  const [sort, setSort] = useState(() => getParam("sort") || "lm_desc");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isDesktop, setIsDesktop] = useState(false);

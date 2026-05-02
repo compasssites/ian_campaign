@@ -74,7 +74,7 @@ contactRoutes.get("/", async (c) => {
 
   const orderBy = sort === "lm_asc"
     ? `CASE WHEN c.lm_number IS NULL OR c.lm_number = '' THEN 1 ELSE 0 END, CAST(REPLACE(COALESCE(c.lm_number,'0'),'LM-','') AS INTEGER) ASC`
-    : sort === "lm_desc"
+    : sort === "lm_desc" || !sort
     ? `CASE WHEN c.lm_number IS NULL OR c.lm_number = '' THEN 1 ELSE 0 END, CAST(REPLACE(COALESCE(c.lm_number,'0'),'LM-','') AS INTEGER) DESC`
     : `c.priority DESC, c.created_at DESC`;
   sql += ` ORDER BY ${orderBy} LIMIT ? OFFSET ?`;
