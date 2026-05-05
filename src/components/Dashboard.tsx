@@ -228,6 +228,32 @@ export default function Dashboard({ memberName, role }: Props) {
     window.location.href = "/api/contacts/export.csv";
   }, []);
 
+  const [copying, setCopying] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const showCopyBtn = (activeTab === "pending" || activeTab === "no_answer" || activeTab === "pending_missed") && !!activeGroup;
+
+  const handleCopyList = useCallback(async () => {
+    setCopying(true);
+    try {
+      const params = new URLSearchParams({ page: "1", limit: "9999" });
+      if (activeTab !== "all") params.set("status", activeTab);
+      if (activeGroup) params.set("group", activeGroup);
+      if (sort) params.set("sort", sort);
+      const r = await fetch(`/api/contacts?${params}`);
+      if (!r.ok) return;
+      const data = await r.json() as { contacts: Contact[] };
+      const tabLabel = activeTab === "pending" ? "Pending" : activeTab === "no_answer" ? "No Answer" : "Pending+Missed";
+      const lines = [`${tabLabel} – ${activeGroup} (${data.contacts.length} contacts)`, ""];
+      data.contacts.forEach((c, i) => {
+        const phone = c.phone?.trim() || "no number";
+        lines.push(`${i + 1}. ${c.name} – ${phone}`);
+      });
+      await navigator.clipboard.writeText(lines.join("\n"));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } finally { setCopying(false); }
+  }, [activeTab, activeGroup, sort]);
+
   const handleChangePin = useCallback(async () => {
     if (!currentPin || !newPin) {
       setPinError("Current PIN and new PIN are required.");
@@ -340,7 +366,7 @@ export default function Dashboard({ memberName, role }: Props) {
         <GroupPicker groups={groups} active={activeGroup} onChange={g => { setActiveGroup(g); setParam("group", g); setPage(1); }} />
       </div>
 
-      {/* Search — full width, clean */}
+      {/* Search + Copy button */}
       <div style={S.filterRow}>
         <div style={{ flex: 1, position: "relative" }}>
           <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, pointerEvents: "none", color: "#9ca3af" }}>🔍</span>
@@ -358,6 +384,15 @@ export default function Dashboard({ memberName, role }: Props) {
             >✕</button>
           )}
         </div>
+        {showCopyBtn && (
+          <button
+            onClick={handleCopyList}
+            disabled={copying}
+            style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, padding: "10px 14px", borderRadius: 12, border: "none", background: copied ? "#d1fae5" : "#1e3a8a", color: copied ? "#065f46" : "white", fontSize: 13, fontWeight: 700, cursor: copying ? "wait" : "pointer", whiteSpace: "nowrap" as const, transition: "background 0.2s" }}
+          >
+            {copied ? "✓ Copied!" : copying ? "…" : "📋 Copy List"}
+          </button>
+        )}
       </div>
 
       {/* List */}

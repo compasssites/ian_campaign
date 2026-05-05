@@ -28,9 +28,9 @@ function toTitleCase(value: string) {
 }
 
 contactRoutes.get("/", async (c) => {
-  const { status, group, search, page, sort } = c.req.query();
+  const { status, group, search, page, sort, limit: limitParam } = c.req.query();
   const pageNum = parseInt(page ?? "1", 10);
-  const limit = 50;
+  const limit = Math.min(parseInt(limitParam ?? "50", 10), 9999);
   const offset = (pageNum - 1) * limit;
 
   let sql = `
