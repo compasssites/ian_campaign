@@ -243,7 +243,7 @@ export default function Dashboard({ memberName, role }: Props) {
   }, []);
 
   const [copying, setCopying] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copyText, setCopyText] = useState<string | null>(null);
   const showCopyBtn = (activeTab === "pending" || activeTab === "no_answer" || activeTab === "pending_missed") && !!activeGroup;
 
   const handleCopyList = useCallback(async () => {
@@ -262,18 +262,7 @@ export default function Dashboard({ memberName, role }: Props) {
         const phone = c.phone?.trim() || "no number";
         lines.push(`${i + 1}. ${c.name} – ${phone}`);
       });
-      const text = lines.join("\n");
-      // Safari blocks clipboard API after async gap — textarea is universally safe
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      ta.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;";
-      document.body.appendChild(ta);
-      ta.focus();
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+      setCopyText(lines.join("\n"));
     } finally { setCopying(false); }
   }, [activeTab, activeGroup, sort]);
 
@@ -411,9 +400,9 @@ export default function Dashboard({ memberName, role }: Props) {
           <button
             onClick={handleCopyList}
             disabled={copying}
-            style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, padding: "10px 14px", borderRadius: 12, border: "none", background: copied ? "#d1fae5" : "#1e3a8a", color: copied ? "#065f46" : "white", fontSize: 13, fontWeight: 700, cursor: copying ? "wait" : "pointer", whiteSpace: "nowrap" as const, transition: "background 0.2s" }}
+            style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, padding: "10px 14px", borderRadius: 12, border: "none", background: "#1e3a8a", color: "white", fontSize: 13, fontWeight: 700, cursor: copying ? "wait" : "pointer", whiteSpace: "nowrap" as const }}
           >
-            {copied ? "✓ Copied!" : copying ? "…" : "📋 Copy List"}
+            {copying ? "…" : "📋 Copy List"}
           </button>
         )}
       </div>
@@ -441,6 +430,25 @@ export default function Dashboard({ memberName, role }: Props) {
           </div>
         )}
       </div>
+
+      {copyText && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(0,0,0,0.55)", display: "flex", flexDirection: "column", justifyContent: "flex-end" }} onClick={() => setCopyText(null)}>
+          <div style={{ background: "white", borderRadius: "24px 24px 0 0", padding: "20px 16px 32px" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#111827" }}>Select all → Copy → Paste in WhatsApp</p>
+              <button onClick={() => setCopyText(null)} style={{ background: "none", border: "none", fontSize: 24, color: "#9ca3af", cursor: "pointer", lineHeight: 1, padding: 0 }}>×</button>
+            </div>
+            <textarea
+              readOnly
+              value={copyText}
+              rows={12}
+              ref={el => { if (el) { el.focus(); el.select(); } }}
+              style={{ width: "100%", border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "12px 14px", fontSize: 13, resize: "none", outline: "none", boxSizing: "border-box", fontFamily: "inherit", lineHeight: 1.6, color: "#111827" }}
+            />
+            <p style={{ margin: "8px 0 0", fontSize: 12, color: "#9ca3af", textAlign: "center" }}>Long-press inside the text → Select All → Copy</p>
+          </div>
+        </div>
+      )}
 
       {showBulk && <BulkImport onClose={() => setShowBulk(false)} onDone={() => { setShowBulk(false); fetchGroups(); refresh(); }} />}
       {showAdd && <AddContact onClose={() => setShowAdd(false)} onDone={() => { setShowAdd(false); refresh(); }} />}
