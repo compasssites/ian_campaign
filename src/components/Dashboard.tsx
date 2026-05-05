@@ -248,7 +248,20 @@ export default function Dashboard({ memberName, role }: Props) {
         const phone = c.phone?.trim() || "no number";
         lines.push(`${i + 1}. ${c.name} – ${phone}`);
       });
-      await navigator.clipboard.writeText(lines.join("\n"));
+      const text = lines.join("\n");
+      // Try modern clipboard API first, fall back to textarea trick
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.cssText = "position:fixed;top:0;left:0;opacity:0;";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } finally { setCopying(false); }
