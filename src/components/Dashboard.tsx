@@ -153,15 +153,16 @@ function setParam(key: string, value: string) {
 export default function Dashboard({ memberName, role }: Props) {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [stats, setStats] = useState({ total: 0, spoke: 0, no_answer: 0, wrong_number: 0, callback: 0, followed_up: 0, pending: 0, called: 0, priority: 0, followup_must: 0 });
-  const [activeTab, setActiveTab] = useState(() => getParam("tab") || "pending");
-  const [search, setSearch] = useState(() => getParam("q") || "");
+  const [activeTab, setActiveTab] = useState("pending");
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [showBulk, setShowBulk] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [groups, setGroups] = useState<string[]>([]);
-  const [activeGroup, setActiveGroup] = useState(() => getParam("group") || "");
-  const [sort, setSort] = useState(() => getParam("sort") || "lm_desc");
+  const [activeGroup, setActiveGroup] = useState("");
+  const [sort, setSort] = useState("lm_desc");
+  const [hydrated, setHydrated] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isDesktop, setIsDesktop] = useState(false);
@@ -198,8 +199,21 @@ export default function Dashboard({ memberName, role }: Props) {
     } finally { setLoading(false); }
   }, [activeTab, search, activeGroup, sort]);
 
+  // Sync state from URL params after hydration (avoids SSR mismatch)
+  useEffect(() => {
+    setActiveTab(getParam("tab") || "pending");
+    setSearch(getParam("q") || "");
+    setActiveGroup(getParam("group") || "");
+    setSort(getParam("sort") || "lm_desc");
+    setHydrated(true);
+  }, []);
+
   useEffect(() => { fetchStats(); fetchGroups(); }, []);
-  useEffect(() => { const t = setTimeout(() => fetchContacts(1), 200); return () => clearTimeout(t); }, [activeTab, search, activeGroup, sort, fetchContacts]);
+  useEffect(() => {
+    if (!hydrated) return;
+    const t = setTimeout(() => fetchContacts(1), 200);
+    return () => clearTimeout(t);
+  }, [activeTab, search, activeGroup, sort, fetchContacts, hydrated]);
   useEffect(() => {
     const sync = () => setIsDesktop(window.innerWidth >= 1024);
     sync();
@@ -249,19 +263,15 @@ export default function Dashboard({ memberName, role }: Props) {
         lines.push(`${i + 1}. ${c.name} – ${phone}`);
       });
       const text = lines.join("\n");
-      // Try modern clipboard API first, fall back to textarea trick
-      try {
-        await navigator.clipboard.writeText(text);
-      } catch {
-        const ta = document.createElement("textarea");
-        ta.value = text;
-        ta.style.cssText = "position:fixed;top:0;left:0;opacity:0;";
-        document.body.appendChild(ta);
-        ta.focus();
-        ta.select();
-        document.execCommand("copy");
-        document.body.removeChild(ta);
-      }
+      // Safari blocks clipboard API after async gap — textarea is universally safe
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } finally { setCopying(false); }
