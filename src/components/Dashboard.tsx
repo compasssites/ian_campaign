@@ -244,7 +244,7 @@ export default function Dashboard({ memberName, role }: Props) {
 
   const [copying, setCopying] = useState(false);
   const [copyText, setCopyText] = useState<string | null>(null);
-  const showCopyBtn = (activeTab === "pending" || activeTab === "no_answer" || activeTab === "pending_missed") && !!activeGroup;
+  const showCopyBtn = !!activeGroup;
 
   const handleCopyList = useCallback(async () => {
     setCopying(true);
