@@ -75,7 +75,7 @@ export default function WaTemplateEditor({ onClose }: Props) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <div>
             <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#111827" }}>WhatsApp Templates</h2>
-            <p style={{ margin: "3px 0 0", fontSize: 12, color: "#9ca3af" }}>Saved centrally — all team members see the same messages</p>
+            <p style={{ margin: "3px 0 0", fontSize: 12, color: "#9ca3af" }}>Saved only for your login — other users keep their own messages</p>
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 28, color: "#9ca3af", cursor: "pointer", lineHeight: 1, padding: 0 }}>×</button>
         </div>
@@ -112,7 +112,7 @@ export default function WaTemplateEditor({ onClose }: Props) {
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={handleSave} disabled={saving || loading}
             style={{ ...primaryBtn, flex: 3, opacity: saving || loading ? 0.6 : 1 }}>
-            {saved ? "✓ Saved!" : saving ? "Saving…" : "Save for Everyone"}
+            {saved ? "✓ Saved!" : saving ? "Saving…" : "Save for Me"}
           </button>
           <button onClick={reset}
             style={{ flex: 1, padding: 14, background: "#f3f4f6", color: "#6b7280", border: "none", borderRadius: 14, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
