@@ -14,7 +14,7 @@ function ulid(): string {
 userRoutes.get("/", async (c) => {
   if (c.get("role") !== "superadmin") return c.json({ error: "Forbidden" }, 403);
   const { results } = await c.env.DB.prepare(
-    `SELECT id, name, email, role, created_at FROM users ORDER BY created_at DESC`
+    `SELECT id, name, email, username, role, created_at FROM users ORDER BY created_at DESC`
   ).all();
   return c.json(results);
 });
@@ -23,8 +23,8 @@ userRoutes.get("/", async (c) => {
 userRoutes.post("/", async (c) => {
   if (c.get("role") !== "superadmin") return c.json({ error: "Forbidden" }, 403);
 
-  const body = await c.req.json<{ name: string; email: string; pin: string; role: Role }>();
-  if (!body.name || !body.email || !body.pin) return c.json({ error: "Name, email and PIN required" }, 400);
+  const body = await c.req.json<{ name: string; email: string; username?: string; pin: string; role: Role }>();
+  if (!body.name || !body.email || !body.pin) return c.json({ error: "Name, email and password required" }, 400);
 
   const allowed: Role[] = ["superadmin", "admin", "member"];
   if (!allowed.includes(body.role)) return c.json({ error: "Invalid role" }, 400);
@@ -33,11 +33,18 @@ userRoutes.post("/", async (c) => {
     .bind(body.email.toLowerCase()).first();
   if (existing) return c.json({ error: "Email already registered" }, 409);
 
+  const username = body.username?.trim().toLowerCase() ?? "";
+  if (username) {
+    const existingUsername = await c.env.DB.prepare(`SELECT id FROM users WHERE lower(username) = ?`)
+      .bind(username).first();
+    if (existingUsername) return c.json({ error: "User ID already taken" }, 409);
+  }
+
   const id = ulid();
   const pin_hash = await hashPin(body.pin);
   await c.env.DB.prepare(
-    `INSERT INTO users (id, name, email, pin_hash, role) VALUES (?, ?, ?, ?, ?)`
-  ).bind(id, body.name.trim(), body.email.toLowerCase().trim(), pin_hash, body.role).run();
+    `INSERT INTO users (id, name, email, username, pin_hash, role) VALUES (?, ?, ?, ?, ?, ?)`
+  ).bind(id, body.name.trim(), body.email.toLowerCase().trim(), username || null, pin_hash, body.role).run();
 
   return c.json({ id }, 201);
 });
@@ -47,12 +54,25 @@ userRoutes.patch("/:id", async (c) => {
   if (c.get("role") !== "superadmin") return c.json({ error: "Forbidden" }, 403);
 
   const { id } = c.req.param();
-  const body = await c.req.json<{ name?: string; role?: Role; pin?: string }>();
+  const body = await c.req.json<{ name?: string; username?: string; role?: Role; pin?: string }>();
 
   const sets: string[] = [];
-  const params: string[] = [];
+  const params: (string | null)[] = [];
 
   if (body.name) { sets.push("name = ?"); params.push(body.name.trim()); }
+  if (body.username !== undefined) {
+    const username = body.username.trim().toLowerCase();
+    if (username) {
+      const existingUsername = await c.env.DB.prepare(`SELECT id FROM users WHERE lower(username) = ? AND id != ?`)
+        .bind(username, id).first();
+      if (existingUsername) return c.json({ error: "User ID already taken" }, 409);
+      sets.push("username = ?");
+      params.push(username);
+    } else {
+      sets.push("username = ?");
+      params.push(null);
+    }
+  }
   if (body.role) {
     const allowed: Role[] = ["superadmin", "admin", "member"];
     if (!allowed.includes(body.role)) return c.json({ error: "Invalid role" }, 400);

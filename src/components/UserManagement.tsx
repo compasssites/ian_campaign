@@ -5,6 +5,7 @@ interface User {
   id: string;
   name: string;
   email: string;
+  username?: string | null;
   role: Role;
   created_at: string;
 }
@@ -26,7 +27,7 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
-  const [form, setForm] = useState({ name: "", email: "", pin: "", role: "member" as Role });
+  const [form, setForm] = useState({ name: "", email: "", username: "", pin: "", role: "member" as Role });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -43,13 +44,13 @@ export default function UserManagement() {
   useEffect(() => { fetchUsers(); }, []);
 
   const resetForm = () => {
-    setForm({ name: "", email: "", pin: "", role: "member" });
+    setForm({ name: "", email: "", username: "", pin: "", role: "member" });
     setError("");
   };
 
   const openAdd = () => { resetForm(); setEditUser(null); setShowAdd(true); };
   const openEdit = (u: User) => {
-    setForm({ name: u.name, email: u.email, pin: "", role: u.role });
+    setForm({ name: u.name, email: u.email, username: u.username ?? "", pin: "", role: u.role });
     setEditUser(u);
     setShowAdd(true);
   };
@@ -62,7 +63,7 @@ export default function UserManagement() {
     try {
       let res: Response;
       if (editUser) {
-        const body: Record<string, string> = { name: form.name, role: form.role };
+        const body: Record<string, string> = { name: form.name, username: form.username, role: form.role };
         if (form.pin) body.pin = form.pin;
         res = await fetch(`/api/users/${editUser.id}`, {
           method: "PATCH",
@@ -138,6 +139,7 @@ export default function UserManagement() {
                   </span>
                 </div>
                 <p className="text-sm text-gray-500 mt-0.5">{u.email}</p>
+                {u.username && <p className="text-xs text-gray-400 mt-0.5">User ID: {u.username}</p>}
               </div>
               <div className="flex gap-2">
                 <button
@@ -190,8 +192,18 @@ export default function UserManagement() {
                 />
               </div>
               <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">User ID</label>
+                <input
+                  type="text"
+                  value={form.username}
+                  onChange={(e) => setForm((f) => ({ ...f, username: e.target.value.toLowerCase() }))}
+                  placeholder="rahul"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+              <div>
                 <label className="text-xs font-medium text-gray-600 block mb-1">
-                  {editUser ? "New PIN (leave blank to keep current)" : "PIN *"}
+                  {editUser ? "New Password (leave blank to keep current)" : "Password *"}
                 </label>
                 <input
                   type="password"

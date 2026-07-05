@@ -26,6 +26,7 @@ export interface CallLog {
   id: string;
   contact_id: string;
   called_by?: string;
+  called_by_user_id?: string;
   status: ContactStatus;
   notes?: string;
   called_at: string;

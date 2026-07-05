@@ -9,18 +9,20 @@ type Bindings = { DB: D1Database; SESSIONS: KVNamespace; CAMPAIGN_PIN: string };
 export const authRoutes = new Hono<{ Bindings: Bindings }>();
 
 authRoutes.post("/login", async (c) => {
-  const body = await c.req.json<{ email: string; pin: string }>();
-  if (!body.email || !body.pin) return c.json({ error: "Email and PIN required" }, 400);
+  const body = await c.req.json<{ identifier: string; pin: string }>();
+  if (!body.identifier || !body.pin) return c.json({ error: "User ID and password required" }, 400);
 
   const user = await c.env.DB.prepare(
-    `SELECT id, name, email, role, pin_hash FROM users WHERE email = ?`
-  ).bind(body.email.toLowerCase().trim()).first<{
-    id: string; name: string; email: string; role: Role; pin_hash: string;
+    `SELECT id, name, email, role, pin_hash, username
+     FROM users
+     WHERE lower(email) = ? OR lower(COALESCE(username, '')) = ?`
+  ).bind(body.identifier.toLowerCase().trim(), body.identifier.toLowerCase().trim()).first<{
+    id: string; name: string; email: string; role: Role; pin_hash: string; username?: string | null;
   }>();
 
-  if (!user) return c.json({ error: "Invalid email or PIN" }, 401);
+  if (!user) return c.json({ error: "Invalid user ID or password" }, 401);
   const valid = await verifyPin(body.pin, user.pin_hash);
-  if (!valid) return c.json({ error: "Invalid email or PIN" }, 401);
+  if (!valid) return c.json({ error: "Invalid user ID or password" }, 401);
 
   const token = await createSession(c.env.SESSIONS, {
     userId: user.id,

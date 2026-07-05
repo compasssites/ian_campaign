@@ -26,3 +26,6 @@ VALUES (
 --   'HASH_HERE',
 --   'admin'
 -- );
+
+-- For the July 2026 fresh-start reset and 2 candidate accounts,
+-- run scripts/reset_campaign_for_two_candidates.sql instead.

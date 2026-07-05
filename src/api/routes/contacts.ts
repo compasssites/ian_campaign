@@ -27,7 +27,22 @@ function toTitleCase(value: string) {
     .join(" ");
 }
 
+function latestCallJoinSql(userScoped: boolean) {
+  return userScoped
+    ? `LEFT JOIN call_logs cl ON cl.id = (
+        SELECT id FROM call_logs
+        WHERE contact_id = c.id AND called_by_user_id = ?
+        ORDER BY called_at DESC LIMIT 1
+      )`
+    : `LEFT JOIN call_logs cl ON cl.id = (
+        SELECT id FROM call_logs
+        WHERE contact_id = c.id
+        ORDER BY called_at DESC LIMIT 1
+      )`;
+}
+
 contactRoutes.get("/", async (c) => {
+  const userId = c.get("userId");
   const { status, group, search, page, sort, limit: limitParam } = c.req.query();
   const pageNum = parseInt(page ?? "1", 10);
   const limit = Math.min(parseInt(limitParam ?? "50", 10), 9999);
@@ -37,12 +52,10 @@ contactRoutes.get("/", async (c) => {
     SELECT c.*,
       cl.status, cl.notes, cl.called_at, cl.called_by
     FROM contacts c
-    LEFT JOIN call_logs cl ON cl.id = (
-      SELECT id FROM call_logs WHERE contact_id = c.id ORDER BY called_at DESC LIMIT 1
-    )
+    ${latestCallJoinSql(true)}
     WHERE 1=1
   `;
-  const params: (string | number)[] = [];
+  const params: (string | number)[] = [userId];
 
   if (status && status !== "all") {
     if (status === "pending") {
@@ -184,9 +197,7 @@ contactRoutes.get("/master", async (c) => {
     SELECT c.*,
       cl.status, cl.notes, cl.called_at, cl.called_by
     FROM contacts c
-    LEFT JOIN call_logs cl ON cl.id = (
-      SELECT id FROM call_logs WHERE contact_id = c.id ORDER BY called_at DESC LIMIT 1
-    )
+    ${latestCallJoinSql(false)}
     WHERE 1=1
   `;
   const params: (string | number)[] = [];
@@ -367,8 +378,11 @@ contactRoutes.patch("/:id/master", async (c) => {
 
   if (body.status !== undefined || body.notes !== undefined) {
     const current = await c.env.DB.prepare(
-      `SELECT status, notes FROM call_logs WHERE contact_id = ? ORDER BY called_at DESC LIMIT 1`
-    ).bind(id).first<{ status?: ContactStatus; notes?: string | null }>();
+      `SELECT status, notes
+       FROM call_logs
+       WHERE contact_id = ? AND called_by_user_id = ?
+       ORDER BY called_at DESC LIMIT 1`
+    ).bind(id, c.get("userId")).first<{ status?: ContactStatus; notes?: string | null }>();
 
     const nextStatus = body.status ?? current?.status ?? "pending";
     const nextNotes = body.notes ?? current?.notes ?? null;
@@ -415,12 +429,13 @@ contactRoutes.post("/bulk-action", async (c) => {
     const validStatuses = ["pending","spoke","no_answer","wrong_number","callback","followed_up"];
     if (!validStatuses.includes(action)) return c.json({ error: "Invalid action" }, 400);
     const stmt = c.env.DB.prepare(
-      `INSERT INTO call_logs (id, contact_id, called_by, status) VALUES (?, ?, ?, ?)`
+      `INSERT INTO call_logs (id, contact_id, called_by, called_by_user_id, status) VALUES (?, ?, ?, ?, ?)`
     );
     const calledBy = c.get("memberName") ?? "Bulk";
+    const calledByUserId = c.get("userId") ?? null;
     const batch = ids.map(id => {
       const lid = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`;
-      return stmt.bind(lid, id, calledBy, action);
+      return stmt.bind(lid, id, calledBy, calledByUserId, action);
     });
     await c.env.DB.batch(batch);
   }

@@ -41,8 +41,11 @@ callRoutes.post("/", async (c) => {
 
 callRoutes.get("/:contactId", async (c) => {
   const { contactId } = c.req.param();
+  const userId = c.get("userId");
   const { results } = await c.env.DB.prepare(
-    `SELECT * FROM call_logs WHERE contact_id = ? ORDER BY called_at DESC LIMIT 20`
-  ).bind(contactId).all();
+    `SELECT * FROM call_logs
+     WHERE contact_id = ? AND called_by_user_id = ?
+     ORDER BY called_at DESC LIMIT 20`
+  ).bind(contactId, userId).all();
   return c.json(results);
 });

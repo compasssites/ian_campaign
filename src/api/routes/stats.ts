@@ -1,10 +1,13 @@
 import { Hono } from "hono";
+import type { Role } from "../../lib/auth/session";
 
 type Bindings = { DB: D1Database; SESSIONS: KVNamespace; CAMPAIGN_PIN: string };
+type Variables = { memberName: string; role: Role; userId: string };
 
-export const statsRoutes = new Hono<{ Bindings: Bindings }>();
+export const statsRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
 statsRoutes.get("/", async (c) => {
+  const userId = c.get("userId");
   const [totalRow, priorityRow, followupRow, byStatus] = await Promise.all([
     c.env.DB.prepare(`SELECT COUNT(*) as n FROM contacts`).first<{ n: number }>(),
     c.env.DB.prepare(`SELECT COUNT(*) as n FROM contacts WHERE priority = 1`).first<{ n: number }>(),
@@ -13,10 +16,12 @@ statsRoutes.get("/", async (c) => {
       SELECT COALESCE(cl.status, 'pending') as status, COUNT(*) as n
       FROM contacts c
       LEFT JOIN call_logs cl ON cl.id = (
-        SELECT id FROM call_logs WHERE contact_id = c.id ORDER BY called_at DESC LIMIT 1
+        SELECT id FROM call_logs
+        WHERE contact_id = c.id AND called_by_user_id = ?
+        ORDER BY called_at DESC LIMIT 1
       )
       GROUP BY COALESCE(cl.status, 'pending')
-    `).all<{ status: string; n: number }>(),
+    `).bind(userId).all<{ status: string; n: number }>(),
   ]);
 
   const map: Record<string, number> = { pending: 0, spoke: 0, no_answer: 0, wrong_number: 0, callback: 0, followed_up: 0 };
