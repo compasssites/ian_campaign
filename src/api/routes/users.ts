@@ -79,7 +79,7 @@ userRoutes.patch("/:id", async (c) => {
     sets.push("role = ?"); params.push(body.role);
   }
   if (body.pin) {
-    sets.push("pin_hash = ?");
+    sets.push("pin_hash = ?", "auth_version = auth_version + 1");
     params.push(await hashPin(body.pin));
   }
 
@@ -103,6 +103,6 @@ userRoutes.post("/reset-pin", async (c) => {
   const body = await c.req.json<{ pin: string }>();
   if (!body.pin || body.pin.length < 4) return c.json({ error: "PIN must be at least 4 characters" }, 400);
   const hash = await hashPin(body.pin);
-  await c.env.DB.prepare(`UPDATE users SET pin_hash = ? WHERE id = ?`).bind(hash, c.get("userId")).run();
+  await c.env.DB.prepare(`UPDATE users SET pin_hash = ?, auth_version=auth_version+1 WHERE id = ?`).bind(hash, c.get("userId")).run();
   return c.json({ ok: true });
 });

@@ -6,7 +6,7 @@ import UserManagement from "../components/UserManagement";
 const runtime = Astro.locals.runtime;
 const env = runtime?.env as Env | undefined;
 const token = getTokenFromCookie(Astro.request.headers.get("Cookie"));
-const session = env?.SESSIONS ? await getSession(env.SESSIONS, token) : null;
+const session = env?.SESSIONS ? await getSession(env.SESSIONS, token, env.DB) : null;
 
 if (!session) return Astro.redirect("/login");
 if (session.role !== "superadmin") return Astro.redirect("/dashboard");

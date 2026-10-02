@@ -13,22 +13,27 @@ authRoutes.post("/login", async (c) => {
   if (!body.identifier || !body.pin) return c.json({ error: "User ID and password required" }, 400);
 
   const user = await c.env.DB.prepare(
-    `SELECT id, name, email, role, pin_hash, username
+    `SELECT id, name, email, role, pin_hash, username, auth_version
      FROM users
      WHERE lower(email) = ? OR lower(COALESCE(username, '')) = ?`
   ).bind(body.identifier.toLowerCase().trim(), body.identifier.toLowerCase().trim()).first<{
-    id: string; name: string; email: string; role: Role; pin_hash: string; username?: string | null;
+    id: string; name: string; email: string; role: Role; pin_hash: string; username?: string | null; auth_version:number;
   }>();
 
   if (!user) return c.json({ error: "Invalid user ID or password" }, 401);
   const valid = await verifyPin(body.pin, user.pin_hash);
   if (!valid) return c.json({ error: "Invalid user ID or password" }, 401);
 
+  if(!user.pin_hash.startsWith('pbkdf2$')) {
+    const upgraded=await c.env.DB.prepare('UPDATE users SET pin_hash=? WHERE id=? AND pin_hash=? RETURNING id').bind(await hashPin(body.pin),user.id,user.pin_hash).first();
+    if(!upgraded)return c.json({error:'Credentials changed. Please sign in again.'},401);
+  }
   const token = await createSession(c.env.SESSIONS, {
     userId: user.id,
     memberName: user.name,
     email: user.email,
     role: user.role,
+    authVersion:user.auth_version,
   });
 
   return c.json({ ok: true, role: user.role, name: user.name }, 200, {
@@ -38,20 +43,20 @@ authRoutes.post("/login", async (c) => {
 
 authRoutes.post("/logout", async (c) => {
   const token = getTokenFromCookie(c.req.header("Cookie") ?? null);
-  if (token) await deleteSession(c.env.SESSIONS, token);
+  if (token) await deleteSession(c.env.SESSIONS, token, c.env.DB);
   return c.json({ ok: true }, 200, { "Set-Cookie": clearSessionCookie() });
 });
 
 authRoutes.get("/me", async (c) => {
   const token = getTokenFromCookie(c.req.header("Cookie") ?? null);
-  const session = await getSession(c.env.SESSIONS, token);
+  const session = await getSession(c.env.SESSIONS, token, c.env.DB);
   if (!session) return c.json({ error: "Unauthorized" }, 401);
   return c.json({ memberName: session.memberName, role: session.role, email: session.email });
 });
 
 authRoutes.post("/change-pin", async (c) => {
   const token = getTokenFromCookie(c.req.header("Cookie") ?? null);
-  const session = await getSession(c.env.SESSIONS, token);
+  const session = await getSession(c.env.SESSIONS, token, c.env.DB);
   if (!session) return c.json({ error: "Unauthorized" }, 401);
 
   const body = await c.req.json<{ currentPin: string; newPin: string }>();
@@ -66,6 +71,6 @@ authRoutes.post("/change-pin", async (c) => {
   if (!valid) return c.json({ error: "Current PIN is incorrect" }, 401);
 
   const newHash = await hashPin(body.newPin);
-  await c.env.DB.prepare(`UPDATE users SET pin_hash = ? WHERE id = ?`).bind(newHash, session.userId).run();
+  await c.env.DB.prepare(`UPDATE users SET pin_hash = ?, auth_version=auth_version+1 WHERE id = ?`).bind(newHash, session.userId).run();
   return c.json({ ok: true });
 });
